@@ -56,21 +56,7 @@ object NoSuchMethodAnalyzer {
         val analyzer = AndroidApiLevelCheck.Analyzer(emptyMap())
         val asmClasses: AsmClassesM = mutableMapOf()
         libs.forEach { lib ->
-            if (lib.name.endsWith(".jar")) {
-                ZipFile(lib).use { zip ->
-                    zip.entries().iterator().forEach l@{ entry ->
-                        if (entry.isDirectory) return@l
-                        if (!entry.name.endsWith(".class")) return@l
-                        zip.getInputStream(entry).use { it.readClass() }.let {
-                            asmClasses[it.name] = it
-                        }
-                    }
-                }
-            } else if (lib.isDirectory) {
-                lib.walk().filter { it.isFile && it.extension == "class" }.forEach { f ->
-                    f.readClass().let { asmClasses[it.name] = it }
-                }
-            }
+            asmClasses += lib.readLib()
         }
         classes.map { it.walk() }.flatten().filter { it.isFile }
             .filter { it.extension == "class" }

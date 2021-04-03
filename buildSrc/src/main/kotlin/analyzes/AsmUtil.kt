@@ -16,11 +16,32 @@ import org.objectweb.asm.tree.FieldNode
 import org.objectweb.asm.tree.MethodNode
 import java.io.File
 import java.io.InputStream
+import java.util.zip.ZipFile
 
 typealias AsmClasses = Map<String, ClassNode>
 typealias AsmClassesM = MutableMap<String, ClassNode>
 
 object AsmUtil {
+    fun File.readLib(): AsmClassesM {
+        val result: AsmClassesM = mutableMapOf()
+        if (this.name.endsWith(".jar")) {
+            ZipFile(this).use { zip ->
+                zip.entries().iterator().forEach l@{ entry ->
+                    if (entry.isDirectory) return@l
+                    if (!entry.name.endsWith(".class")) return@l
+                    zip.getInputStream(entry).use { it.readClass() }.let {
+                        result[it.name] = it
+                    }
+                }
+            }
+        } else if (this.isDirectory) {
+            this.walk().filter { it.isFile && it.extension == "class" }.forEach { f ->
+                f.readClass().let { result[it.name] = it }
+            }
+        }
+        return result
+    }
+
     fun ClassNode.getMethod(name: String, desc: String, isStatic: Boolean): MethodNode? {
         return methods?.firstOrNull {
             it.name == name && it.desc == desc && ((it.access and Opcodes.ACC_STATIC) != 0) == isStatic
