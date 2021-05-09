@@ -66,7 +66,7 @@ internal abstract class AbstractRealNetworkHandlerTest<H : NetworkHandler> : Abs
 
     protected val nhEvents = ConcurrentLinkedQueue<NHEvent>()
 
-    open val defaultComponents = ConcurrentComponentStorage().apply {
+    protected open val defaultComponents = ConcurrentComponentStorage().apply {
         val components = this
         val configuration = bot.configuration
         set(SsoProcessorContext, SsoProcessorContextImpl(bot))
