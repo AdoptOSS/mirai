@@ -9,7 +9,6 @@
 
 package net.mamoe.mirai.internal.network.handler
 
-import net.mamoe.mirai.internal.network.framework.AbstractMockNetworkHandlerTest
 import net.mamoe.mirai.internal.network.handler.NetworkHandler.State
 import net.mamoe.mirai.internal.network.handler.selector.AbstractKeepAliveNetworkHandlerSelector
 import net.mamoe.mirai.internal.test.runBlockingUnit
@@ -26,10 +25,13 @@ private class TestSelector(val createInstance0: () -> NetworkHandler) :
     }
 }
 
-internal class KeepAliveNetworkHandlerSelectorTest : AbstractMockNetworkHandlerTest() {
+internal class KeepAliveNetworkHandlerSelectorTest {
+
+    private fun createHandler() = TestNetworkHandler(TestNetworkHandlerContext())
+
     @Test
     fun `can initialize instance`() {
-        val selector = TestSelector { createNetworkHandler().apply { setState(State.OK) } }
+        val selector = TestSelector { createHandler().apply { setState(State.OK) } }
         runBlockingUnit(timeout = 3.seconds) { selector.awaitResumeInstance() }
         assertNotNull(selector.getResumedInstance())
     }
@@ -39,7 +41,7 @@ internal class KeepAliveNetworkHandlerSelectorTest : AbstractMockNetworkHandlerT
         val selector = TestSelector {
             fail("initialize called")
         }
-        val handler = createNetworkHandler()
+        val handler = createHandler()
         selector.setCurrent(handler)
         assertSame(handler, selector.getResumedInstance())
     }
@@ -47,9 +49,9 @@ internal class KeepAliveNetworkHandlerSelectorTest : AbstractMockNetworkHandlerT
     @Test
     fun `initialize another when closed`() {
         val selector = TestSelector {
-            createNetworkHandler().apply { setState(State.OK) }
+            createHandler().apply { setState(State.OK) }
         }
-        val handler = createNetworkHandler()
+        val handler = createHandler()
         selector.setCurrent(handler)
         assertSame(handler, selector.getResumedInstance())
         handler.setState(State.CLOSED)

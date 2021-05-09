@@ -9,7 +9,6 @@
 
 package net.mamoe.mirai.internal.network.component
 
-import net.mamoe.mirai.internal.test.AbstractTest
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
@@ -25,7 +24,7 @@ private data class TestComponent3(
     companion object : ComponentKey<TestComponent3>
 }
 
-internal class ComponentStorageTest : AbstractTest() {
+internal class ComponentStorageTest {
     @Test
     fun `can put component`() {
         val storage = ConcurrentComponentStorage().apply {

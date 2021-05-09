@@ -9,8 +9,6 @@
 
 package net.mamoe.mirai.internal.network
 
-import net.mamoe.mirai.internal.test.AbstractTest
-
 internal class PacketCodecTest : AbstractCodecTest()
 
-internal abstract class AbstractCodecTest : AbstractTest()
+internal abstract class AbstractCodecTest
