@@ -75,7 +75,7 @@ internal class BotInitProcessorImpl(
             launch { context[ContactUpdater].loadAll(registerResp.origin) }
         }
 
-        bot.components[SsoProcessor].firstLoginSucceed = true
+        bot.firstLoginSucceed = true
     }
 
     private suspend fun registerClientOnline(): StatSvc.Register.Response {

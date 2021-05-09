@@ -15,8 +15,7 @@ import net.mamoe.mirai.utils.MiraiLogger
 import net.mamoe.mirai.utils.debug
 
 internal class LoggingStateObserver(
-    val logger: MiraiLogger,
-    private val showStacktrace: Boolean = false
+    val logger: MiraiLogger
 ) : StateObserver {
     override fun toString(): String {
         return "LoggingStateObserver"
@@ -27,10 +26,7 @@ internal class LoggingStateObserver(
         previous: NetworkHandlerSupport.BaseStateImpl,
         new: NetworkHandlerSupport.BaseStateImpl
     ) {
-        logger.debug(
-            { "State changed: ${previous.correspondingState} -> ${new.correspondingState}" },
-            if (showStacktrace) Exception("Show stacktrace") else null
-        )
+        logger.debug { "State changed: ${previous.correspondingState} -> ${new.correspondingState}" }
     }
 
     override fun exceptionOnCreatingNewState(
@@ -38,7 +34,7 @@ internal class LoggingStateObserver(
         previousState: NetworkHandlerSupport.BaseStateImpl,
         exception: Throwable
     ) {
-        logger.debug { "State changed: ${previousState.correspondingState} -> $exception" }
+        logger.debug({ "State changed: ${previousState.correspondingState} -> $exception" }, exception)
     }
 
     override fun beforeStateResume(networkHandler: NetworkHandler, state: NetworkHandlerSupport.BaseStateImpl) {

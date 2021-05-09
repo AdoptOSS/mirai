@@ -14,7 +14,6 @@ import net.mamoe.mirai.event.Event
 import net.mamoe.mirai.event.events.BotOfflineEvent
 import net.mamoe.mirai.event.events.BotOnlineEvent
 import net.mamoe.mirai.event.events.BotReloginEvent
-import net.mamoe.mirai.internal.network.components.SsoProcessor
 import net.mamoe.mirai.internal.network.handler.NetworkHandler.State
 import net.mamoe.mirai.internal.network.handler.NetworkHandler.State.INITIALIZED
 import net.mamoe.mirai.internal.network.handler.NetworkHandler.State.OK
@@ -41,7 +40,7 @@ internal class NettyHandlerEventTest : AbstractNettyNHTest() {
         assertEventBroadcasts<BotReloginEvent> {
             assertEquals(INITIALIZED, network.state)
             bot.login()
-            bot.components[SsoProcessor].firstLoginSucceed = true
+            bot.firstLoginSucceed = true
             network.setStateConnecting()
             network.resumeConnection()
             delay(3.seconds) // `login` launches a job which broadcasts the event
@@ -53,7 +52,7 @@ internal class NettyHandlerEventTest : AbstractNettyNHTest() {
     fun `BotOnlineEvent after successful reconnection`() = runBlockingUnit {
         assertEquals(INITIALIZED, network.state)
         bot.login()
-        bot.components[SsoProcessor].firstLoginSucceed = true
+        bot.firstLoginSucceed = true
         assertEquals(OK, network.state)
         delay(3.seconds) // `login` launches a job which broadcasts the event
         assertEventBroadcasts<BotOnlineEvent>(1) {
@@ -68,7 +67,7 @@ internal class NettyHandlerEventTest : AbstractNettyNHTest() {
     fun `BotOfflineEvent after successful reconnection`() = runBlockingUnit {
         assertEquals(INITIALIZED, network.state)
         bot.login()
-        bot.components[SsoProcessor].firstLoginSucceed = true
+        bot.firstLoginSucceed = true
         assertEquals(OK, network.state)
         delay(3.seconds) // `login` launches a job which broadcasts the event
         assertEventBroadcasts<BotOfflineEvent>(1) {
@@ -82,7 +81,7 @@ internal class NettyHandlerEventTest : AbstractNettyNHTest() {
     private fun noEventOn(setState: () -> Unit) = runBlockingUnit {
         assertState(INITIALIZED)
         bot.login()
-        bot.components[SsoProcessor].firstLoginSucceed = true
+        bot.firstLoginSucceed = true
         assertState(OK)
         network.setStateConnecting()
         delay(3.seconds) // `login` launches a job which broadcasts the event
