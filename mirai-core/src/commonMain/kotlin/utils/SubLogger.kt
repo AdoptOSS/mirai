@@ -20,7 +20,6 @@ private class SubLogger(
     private val main: MiraiLogger,
 ) : MiraiLoggerPlatformBase() {
     override val identity: String? get() = main.identity
-    override val isEnabled: Boolean get() = main.isEnabled
 
     override fun verbose0(message: String?, e: Throwable?) {
         if (message != null) {
