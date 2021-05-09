@@ -9,11 +9,14 @@
 
 package net.mamoe.mirai.internal.network.component
 
-import kotlin.reflect.*
+import kotlin.reflect.KClass
+import kotlin.reflect.KClassifier
+import kotlin.reflect.KType
+import kotlin.reflect.KTypeParameter
 import kotlin.reflect.full.allSupertypes
 
 /**
- * A key for specific component [T]. Components are not polymorphic.
+ * A key for specific component [T]. Component are not polymorphic.
  *
  * @param T is a type hint.
  */
@@ -25,36 +28,14 @@ internal interface ComponentKey<T : Any> {
      * - If [qualified] is `true`, example: `net.mamoe.mirai.internal.network.components.PacketCodec`.
      */
     fun componentName(qualified: Boolean = false): String {
-        val argument = getComponentTypeArgument()
-        argument?.render(qualified)?.let { return it }
-        return argument?.type?.classifier.renderClassifier(qualified)
+        return getComponentTypeArgumentClassifier().renderClassifier(fullName = qualified)
     }
 
     fun smartToString(qualified: Boolean = false): String {
         return "ComponentKey<${componentName(qualified)}>"
     }
 
-    companion object {
-        // reflection is slow, but it is initialized once only (if memory sufficient).
-
-        private fun KTypeProjection.render(
-            fullName: Boolean
-        ): String? {
-            val projection = this
-
-            projection.type?.classifier?.let { classifier ->
-                if (classifier is KClass<*>) {
-                    return classifier.run { if (fullName) qualifiedName else simpleName } ?: "?"
-                }
-            }
-
-            projection.type?.arguments?.firstOrNull()?.let { argument ->
-                return argument.render(fullName)
-            }
-
-            return null
-        }
-
+    private companion object {
         private fun KClassifier?.renderClassifier(
             fullName: Boolean
         ): String {
@@ -72,16 +53,16 @@ internal interface ComponentKey<T : Any> {
             val upperBounds = upperBounds
             return when (upperBounds.size) {
                 0 -> toString()
-                1 -> upperBounds[0].renderType(fullName)
-                else -> upperBounds.joinToString(" & ") { it.renderType(fullName) }
+                1 -> "ComponentKey<${upperBounds[0].renderType(fullName)}>"
+                else -> "ComponentKey<${upperBounds.joinToString(" & ") { it.renderType(fullName) }}>"
             }
         }
 
-        private fun ComponentKey<*>.getComponentTypeArgument(): KTypeProjection? {
+        private fun ComponentKey<*>.getComponentTypeArgumentClassifier(): KClassifier? {
             val thisType = this::class.allSupertypes.find { it.classifier == COMPONENT_KEY_K_CLASS }
-            return thisType?.arguments?.firstOrNull()
+            return thisType?.arguments?.firstOrNull()?.type?.classifier
         }
 
-        private val COMPONENT_KEY_K_CLASS = ComponentKey::class
+        val COMPONENT_KEY_K_CLASS = ComponentKey::class
     }
 }
