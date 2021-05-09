@@ -29,7 +29,6 @@ import net.mamoe.mirai.internal.contact.info.StrangerInfoImpl
 import net.mamoe.mirai.internal.contact.toMiraiFriendInfo
 import net.mamoe.mirai.internal.network.Packet
 import net.mamoe.mirai.internal.network.handler.component.ComponentKey
-import net.mamoe.mirai.internal.network.handler.component.ComponentStorage
 import net.mamoe.mirai.internal.network.handler.logger
 import net.mamoe.mirai.internal.network.isValid
 import net.mamoe.mirai.internal.network.protocol.data.jce.StTroopNum
@@ -42,11 +41,8 @@ import net.mamoe.mirai.utils.info
 import net.mamoe.mirai.utils.retryCatching
 import net.mamoe.mirai.utils.verbose
 
-/**
- * Uses [ContactCacheService]
- */
 internal interface ContactUpdater {
-    suspend fun loadAll(registerResp: SvcRespRegister) // TODO: 2021/4/17 call this fun
+    suspend fun loadAll(registerResp: SvcRespRegister)
 
     fun closeAllContacts(e: CancellationException)
 
@@ -54,11 +50,8 @@ internal interface ContactUpdater {
 }
 
 internal class ContactUpdaterImpl(
-    val bot: QQAndroidBot, // not good
-    val components: ComponentStorage
+    val bot: QQAndroidBot,
 ) : ContactUpdater {
-    private val cacheService get() = components[ContactCacheService]
-
     @Synchronized
     override suspend fun loadAll(registerResp: SvcRespRegister) {
         coroutineScope {
@@ -99,14 +92,14 @@ internal class ContactUpdaterImpl(
             return
         }
 
-        val friendListCache = cacheService.friendListCache
+        val friendListCache = bot.friendListCache
 
         fun updateCacheSeq(list: List<FriendInfoImpl>) {
-            cacheService.friendListCache?.apply {
+            bot.friendListCache?.apply {
                 friendListSeq = registerResp.iLargeSeq
                 timeStamp = registerResp.timeStamp
                 this.list = list
-                cacheService.saveFriendCache()
+                bot.saveFriendCache()
             }
         }
 
@@ -172,7 +165,7 @@ internal class ContactUpdaterImpl(
             )
         }
 
-        val cache = cacheService.groupMemberListCaches?.get(groupCode)
+        val cache = bot.groupMemberListCaches?.get(groupCode)
         val members = if (cache != null) {
             if (cache.isValid(stTroopNum)) {
                 cache.list.asSequence().also {
@@ -181,7 +174,7 @@ internal class ContactUpdaterImpl(
             } else refreshGroupMemberList().also { sequence ->
                 cache.troopMemberNumSeq = dwMemberNumSeq ?: 0
                 cache.list = sequence.mapTo(ArrayList()) { it as MemberInfoImpl }
-                cacheService.groupMemberListCaches!!.reportChanged(groupCode)
+                bot.groupMemberListCaches!!.reportChanged(groupCode)
             }
         } else {
             refreshGroupMemberList()
@@ -243,7 +236,7 @@ internal class ContactUpdaterImpl(
         }
 
         logger.info { "Successfully loaded group list: ${troopListData.groups.size} in total." }
-        cacheService.groupMemberListCaches?.saveGroupCaches()
+        bot.groupMemberListCaches?.saveGroupCaches()
         initGroupOk = true
     }
 
