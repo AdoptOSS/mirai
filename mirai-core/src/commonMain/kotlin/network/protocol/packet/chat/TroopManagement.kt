@@ -137,7 +137,7 @@ internal class TroopManagement {
 
         operator fun invoke(
             client: QQAndroidClient
-        ) = buildOutgoingUniPacket(client) {
+        ): OutgoingPacket = buildOutgoingUniPacket(client) {
             writeProtoBuf(
                 OidbSso.OIDBSSOPkg.serializer(), OidbSso.OIDBSSOPkg(
                     command = 1174,
@@ -193,7 +193,7 @@ internal class TroopManagement {
             client: QQAndroidClient,
             member: Member,
             message: String
-        ) = buildOutgoingUniPacket(client) {
+        ): OutgoingPacket = buildOutgoingUniPacket(client) {
             writeProtoBuf(
                 OidbSso.OIDBSSOPkg.serializer(),
                 OidbSso.OIDBSSOPkg(
@@ -224,7 +224,7 @@ internal class TroopManagement {
             client: QQAndroidClient,
             groupCode: Long,
             switch: Boolean
-        ) = impl(client, groupCode) {
+        ): OutgoingPacket = impl(client, groupCode) {
             shutupTime = if (switch) 0x0FFFFFFF else 0
         }
 
@@ -252,7 +252,7 @@ internal class TroopManagement {
             client: QQAndroidClient,
             groupCode: Long,
             switch: Boolean
-        ) = impl(client, groupCode) {
+        ): OutgoingPacket = impl(client, groupCode) {
             groupFlagext3 = if (switch) 0x00100000 else 0x00000000//暂时无效
         }
 
@@ -260,7 +260,7 @@ internal class TroopManagement {
             client: QQAndroidClient,
             groupCode: Long,
             newName: String
-        ) = impl(client, groupCode) {
+        ): OutgoingPacket = impl(client, groupCode) {
             ingGroupName = newName.toByteArray()
         }
 
@@ -268,7 +268,7 @@ internal class TroopManagement {
             client: QQAndroidClient,
             groupCode: Long,
             newMemo: String
-        ) = impl(client, groupCode) {
+        ): OutgoingPacket = impl(client, groupCode) {
             ingGroupMemo = newMemo.toByteArray()
         }
 
@@ -276,7 +276,7 @@ internal class TroopManagement {
             client: QQAndroidClient,
             groupCode: Long,
             switch: Boolean
-        ) = impl(client, groupCode) {
+        ): OutgoingPacket = impl(client, groupCode) {
             allowMemberInvite = if (switch) 1 else 0
         }
 

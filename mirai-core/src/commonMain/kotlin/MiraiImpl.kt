@@ -31,6 +31,7 @@ import net.mamoe.mirai.internal.contact.info.MemberInfoImpl
 import net.mamoe.mirai.internal.message.*
 import net.mamoe.mirai.internal.message.DeepMessageRefiner.refineDeep
 import net.mamoe.mirai.internal.network.highway.*
+import net.mamoe.mirai.internal.network.protocol
 import net.mamoe.mirai.internal.network.protocol.data.jce.SvcDevLoginInfo
 import net.mamoe.mirai.internal.network.protocol.data.proto.ImMsgBody
 import net.mamoe.mirai.internal.network.protocol.data.proto.LongMsg
@@ -860,7 +861,8 @@ internal open class MiraiImpl : IMirai, LowLevelApiAccessor {
         dstUin: Long
     ): String {
         bot.asQQAndroidBot().network.run {
-            val response = PttStore.GroupPttDown(bot.client, groupId, dstUin, md5).sendAndExpect()
+            val response: PttStore.GroupPttDown.Response.DownLoadInfo =
+                PttStore.GroupPttDown(bot.client, groupId, dstUin, md5).sendAndExpect()
             return "http://${response.strDomain}${response.downPara.encodeToString()}"
         }
     }

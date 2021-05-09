@@ -13,10 +13,7 @@ import kotlinx.io.core.ByteReadPacket
 import net.mamoe.mirai.internal.QQAndroidBot
 import net.mamoe.mirai.internal.network.Packet
 import net.mamoe.mirai.internal.network.QQAndroidClient
-import net.mamoe.mirai.internal.network.protocol.packet.NO_ENCRYPT
-import net.mamoe.mirai.internal.network.protocol.packet.OutgoingPacketFactory
-import net.mamoe.mirai.internal.network.protocol.packet.buildLoginOutgoingPacket
-import net.mamoe.mirai.internal.network.protocol.packet.writeSsoPacket
+import net.mamoe.mirai.internal.network.protocol.packet.*
 import net.mamoe.mirai.internal.network.subAppId
 
 internal class Heartbeat {
@@ -28,7 +25,7 @@ internal class Heartbeat {
 
         operator fun invoke(
             client: QQAndroidClient
-        ) = buildLoginOutgoingPacket(client, 0, key = NO_ENCRYPT) {
+        ): OutgoingPacket = buildLoginOutgoingPacket(client, 0, key = NO_ENCRYPT) {
             writeSsoPacket(client, client.subAppId, commandName, sequenceId = it) {
 
             }

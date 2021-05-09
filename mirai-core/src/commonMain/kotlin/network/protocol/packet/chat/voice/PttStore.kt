@@ -14,6 +14,7 @@ import net.mamoe.mirai.internal.QQAndroidBot
 import net.mamoe.mirai.internal.network.Packet
 import net.mamoe.mirai.internal.network.QQAndroidClient
 import net.mamoe.mirai.internal.network.protocol.data.proto.Cmd0x388
+import net.mamoe.mirai.internal.network.protocol.packet.OutgoingPacket
 import net.mamoe.mirai.internal.network.protocol.packet.OutgoingPacketFactory
 import net.mamoe.mirai.internal.network.protocol.packet.OutgoingPacketWithRespType
 import net.mamoe.mirai.internal.network.protocol.packet.buildOutgoingUniPacket
@@ -127,7 +128,7 @@ internal class PttStore {
 
     }
 
-    object GroupPttDown : OutgoingPacketFactory<GroupPttDown.Response.DownLoadInfo>("PttStore.GroupPttDown") {
+    object GroupPttDown : OutgoingPacketFactory<GroupPttDown.Response>("PttStore.GroupPttDown") {
 
         sealed class Response : Packet {
             class DownLoadInfo(
@@ -151,7 +152,7 @@ internal class PttStore {
             dstUin: Long,
             md5: ByteArray
 
-        ) = buildOutgoingUniPacket(client) {
+        ): OutgoingPacket = buildOutgoingUniPacket(client) {
             writeProtoBuf(
                 Cmd0x388.ReqBody.serializer(), Cmd0x388.ReqBody(
                     netType = 3, // wifi
@@ -173,7 +174,7 @@ internal class PttStore {
             )
         }
 
-        override suspend fun ByteReadPacket.decode(bot: QQAndroidBot): Response.DownLoadInfo {
+        override suspend fun ByteReadPacket.decode(bot: QQAndroidBot): Response {
             val resp0 = readProtoBuf(Cmd0x388.RspBody.serializer())
             val resp =
                 resp0.msgGetpttUrlRsp.firstOrNull() ?: error("cannot find `msgGetpttUrlRsp` from `Cmd0x388.RspBody`")

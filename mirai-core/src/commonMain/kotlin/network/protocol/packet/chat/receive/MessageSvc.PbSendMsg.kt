@@ -301,7 +301,7 @@ internal object MessageSvcPbSendMsg : OutgoingPacketFactory<MessageSvcPbSendMsg.
         targetMember: Member,
         message: MessageChain,
         source: OnlineMessageSourceToTempImpl
-    ) = buildOutgoingUniPacket(client) {
+    ): OutgoingPacket = buildOutgoingUniPacket(client) {
         writeProtoBuf(
             MsgSvc.PbSendMsgReq.serializer(), MsgSvc.PbSendMsgReq(
                 routingHead = MsgSvc.RoutingHead(
