@@ -17,8 +17,9 @@ import net.mamoe.mirai.internal.network.protocol.packet.sendAndExpect
 import net.mamoe.mirai.network.LoginFailedException
 import net.mamoe.mirai.utils.MiraiLogger
 import net.mamoe.mirai.utils.info
-import net.mamoe.mirai.utils.millisToHumanReadableString
-import net.mamoe.mirai.utils.minutesToMillis
+import net.mamoe.mirai.utils.toHumanReadableString
+import kotlin.time.minutes
+import kotlin.time.seconds
 
 internal interface KeyRefreshProcessor {
     suspend fun keyRefreshLoop(handler: NetworkHandler)
@@ -38,8 +39,8 @@ internal class KeyRefreshProcessorImpl(
             while (isActive) {
                 client.wLoginSigInfo.vKey.run {
                     //由过期时间最短的且不会被skey更换更新的vkey计算重新登录的时间
-                    val delay = (expireTime - creationTime).times(1000) - 5.minutesToMillis
-                    logger.info { "Scheduled refresh login session in ${delay.millisToHumanReadableString()}." }
+                    val delay = (expireTime - creationTime).toInt().seconds - 5.minutes
+                    logger.info { "Scheduled refresh login session in ${delay.toHumanReadableString()}." }
                     delay(delay)
                 }
                 runCatching {
@@ -52,8 +53,8 @@ internal class KeyRefreshProcessorImpl(
         launch(CoroutineName("Key Refresh Scheduler")) {
             while (isActive) {
                 client.wLoginSigInfo.sKey.run {
-                    val delay = (expireTime - creationTime).times(1000) - 5.minutesToMillis
-                    logger.info { "Scheduled key refresh in ${delay.millisToHumanReadableString()}." }
+                    val delay = (expireTime - creationTime).seconds - 5.minutes
+                    logger.info { "Scheduled key refresh in ${delay.toHumanReadableString()}." }
                     delay(delay)
                 }
                 runCatching {
