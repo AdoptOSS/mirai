@@ -208,17 +208,13 @@ internal class NettyNetworkHandler(
     override fun initialState(): BaseStateImpl = StateInitialized()
 }
 
-internal suspend fun ChannelFuture.awaitKt(): ChannelFuture {
+private suspend fun ChannelFuture.awaitKt(): ChannelFuture {
     suspendCancellableCoroutine<Unit> { cont ->
         cont.invokeOnCancellation {
             channel().close()
         }
-        addListener { f ->
-            if (f.isSuccess) {
-                cont.resumeWith(Result.success(Unit))
-            } else {
-                cont.resumeWith(Result.failure(f.cause()))
-            }
+        addListener {
+            cont.resumeWith(Result.success(Unit))
         }
     }
     return this
