@@ -14,6 +14,7 @@ import kotlinx.coroutines.runBlocking
 import net.mamoe.mirai.contact.Contact
 import net.mamoe.mirai.contact.Group
 import net.mamoe.mirai.contact.isOperator
+import net.mamoe.mirai.internal.EMPTY_BYTE_ARRAY
 import net.mamoe.mirai.internal.asQQAndroidBot
 import net.mamoe.mirai.internal.contact.groupCode
 import net.mamoe.mirai.internal.message.FileMessageImpl
@@ -118,7 +119,7 @@ internal class RemoteFileImpl(
         get() {
             if (path == ROOT_PATH) return null
             val s = path.substringBeforeLast('/')
-            return RemoteFileImpl(contact, s.ifEmpty { ROOT_PATH })
+            return RemoteFileImpl(contact, if (s.isEmpty()) ROOT_PATH else s)
         }
 
     /**
