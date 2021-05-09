@@ -54,9 +54,7 @@ internal fun Bot.asQQAndroidBot(): QQAndroidBot {
 
 // for tests
 internal class BotDebugConfiguration(
-    var stateObserver: StateObserver? = LOGGING,
-    var recordExceptionInPacketDecoding: Boolean = false,
-    var allowReinitActions: Boolean = false,
+    var stateObserver: StateObserver? = LOGGING
 )
 
 @Suppress("INVISIBLE_MEMBER", "BooleanLiteralArgument", "OverridingDeprecatedMember")
@@ -67,7 +65,6 @@ internal open class QQAndroidBot constructor(
 ) : AbstractBot(configuration, account.id) {
     override val bot: QQAndroidBot get() = this
     val client get() = components[SsoProcessor].client
-
 
     ///////////////////////////////////////////////////////////////////////////
     // network
@@ -80,7 +77,6 @@ internal open class QQAndroidBot constructor(
             components[BotInitProcessor].asObserver(),
             object : StateChangedObserver(State.OK) {
                 private val shouldBroadcastRelogin = atomic(false)
-
                 override fun stateChanged0(
                     networkHandler: NetworkHandlerSupport,
                     previous: BaseStateImpl,
@@ -124,10 +120,6 @@ internal open class QQAndroidBot constructor(
     override val components: ConcurrentComponentStorage by lazy {
         ConcurrentComponentStorage().apply {
             val components = this // avoid mistakes
-
-            // There's no need to interrupt a broadcasting event when network handler closed.
-            set(EventDispatcher, EventDispatcherImpl(bot.coroutineContext, logger.subLogger("EventDispatcher")))
-
             set(SsoProcessorContext, SsoProcessorContextImpl(bot))
             set(SsoProcessor, SsoProcessorImpl(get(SsoProcessorContext)))
             set(HeartbeatProcessor, HeartbeatProcessorImpl())
@@ -147,7 +139,7 @@ internal open class QQAndroidBot constructor(
             set(
                 PacketHandler, PacketHandlerChain(
                     LoggingPacketHandlerAdapter(get(PacketLoggingStrategy), networkLogger),
-                    EventBroadcasterPacketHandler(components),
+                    EventBroadcasterPacketHandler(bot, networkLogger),
                     CallPacketFactoryPacketHandler(bot)
                 )
             )

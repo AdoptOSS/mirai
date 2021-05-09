@@ -24,14 +24,11 @@ import net.mamoe.mirai.internal.network.handler.NetworkHandler.State.INITIALIZED
 import net.mamoe.mirai.internal.network.handler.NetworkHandler.State.OK
 import net.mamoe.mirai.internal.test.assertEventBroadcasts
 import net.mamoe.mirai.internal.test.runBlockingUnit
-import org.junit.jupiter.api.TestInstance
-import java.util.concurrent.atomic.AtomicReference
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.time.seconds
 
 
-@TestInstance(TestInstance.Lifecycle.PER_METHOD)
 internal class NettyHandlerEventTest : AbstractNettyNHTest() {
     @Test
     fun `BotOnlineEvent after successful logon`() = runBlockingUnit {
@@ -121,24 +118,23 @@ internal class NettyHandlerEventTest : AbstractNettyNHTest() {
 
     @Test
     fun `from CONNECTING TO OK the second time`() = runBlockingUnit {
-        val ok = AtomicReference(CompletableDeferred<Unit>())
+        var ok = CompletableDeferred<Unit>()
         defaultComponents[SsoProcessor] = object : SsoProcessor by defaultComponents[SsoProcessor] {
-            override suspend fun login(handler: NetworkHandler) = ok.get().join()
+            override suspend fun login(handler: NetworkHandler) = ok.join()
         }
 
         assertState(INITIALIZED)
 
         network.setStateConnecting()
-        ok.get().complete(Unit)
+        ok.complete(Unit)
         network.resumeConnection()
         assertState(OK)
 
-        ok.set(CompletableDeferred())
+        ok = CompletableDeferred()
         network.setStateConnecting()
         delay(2000)
-        println("Starting receiving events")
         assertEventBroadcasts<Event>(2) {
-            ok.get().complete(Unit)
+            ok.complete(Unit)
             network.resumeConnection()
             delay(2000)
         }.let { event ->

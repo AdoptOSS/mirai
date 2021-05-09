@@ -185,7 +185,7 @@ internal open class NettyNetworkHandler(
         }
 
         override suspend fun resumeConnection0() {
-            setState(this) { StateConnecting(ExceptionCollector()) }
+            setState { StateConnecting(ExceptionCollector()) }
                 ?.resumeConnection()
                 ?: this@NettyNetworkHandler.resumeConnection() // concurrently closed by other thread.
         }
@@ -251,7 +251,7 @@ internal open class NettyNetworkHandler(
         override suspend fun resumeConnection0() {
             connectResult.await() // propagates exceptions
             val connection = connection.await()
-            setState(this) { StateLoading(connection) }
+            setState { StateLoading(connection) }
                 ?.resumeConnection()
                 ?: this@NettyNetworkHandler.resumeConnection() // concurrently closed by other thread.
         }
@@ -290,7 +290,7 @@ internal open class NettyNetworkHandler(
                 join()
             }
             joinCompleted(configPush) // throw exception
-            setState(this) { StateOK(connection, configPush) }
+            setState { StateOK(connection, configPush) }
         } // noop
 
         override fun toString(): String = "StateLoading"
