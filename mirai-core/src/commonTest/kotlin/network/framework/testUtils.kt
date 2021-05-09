@@ -69,7 +69,7 @@ internal open class TestNetworkHandler(
     }
 
     fun setState(correspondingState: NetworkHandler.State) {
-        setState(null) { TestState(correspondingState) }
+        setState { TestState(correspondingState) }
     }
 
     private val initialState = TestState(NetworkHandler.State.INITIALIZED)
