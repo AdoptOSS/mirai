@@ -31,20 +31,11 @@ import java.net.InetSocketAddress
 /**
  * With real factory and components as in [QQAndroidBot.components].
  */
-internal abstract class AbstractRealNetworkHandlerTest<H : NetworkHandler> : AbstractTest() {
-    init {
-        System.setProperty("mirai.debug.network.state.observer.logging", "true")
-        System.setProperty("mirai.debug.network.show.all.components", "true")
-    }
-
-    protected abstract val factory: NetworkHandlerFactory<H>
-
-    protected open val bot: QQAndroidBot by lazy {
-        MockBot {
-            networkHandlerProvider { createHandler() }
-        }
-    }
-    protected open val networkLogger = MiraiLogger.TopLevel
+internal abstract class AbstractRealNetworkHandlerTest<H : NetworkHandler>(
+    private val factory: NetworkHandlerFactory<H>,
+) : AbstractTest() {
+    val bot = MockBot()
+    val networkLogger = MiraiLogger.TopLevel
 
     protected open val defaultComponents = ConcurrentComponentStorage().apply {
         val components = this
@@ -53,13 +44,9 @@ internal abstract class AbstractRealNetworkHandlerTest<H : NetworkHandler> : Abs
         set(SsoProcessor, object : SsoProcessor {
             override val client: QQAndroidClient get() = bot.client
             override val ssoSession: SsoSession get() = bot.client
-            override fun createObserverChain(): StateObserver = get(StateObserver)
+            override fun createObserverChain(): StateObserver = StateObserver.NOP
             override suspend fun login(handler: NetworkHandler) {
                 networkLogger.debug { "SsoProcessor.login" }
-            }
-
-            override suspend fun logout(handler: NetworkHandler) {
-                networkLogger.debug { "SsoProcessor.logout" }
             }
         })
         set(HeartbeatProcessor, object : HeartbeatProcessor {
@@ -67,13 +54,8 @@ internal abstract class AbstractRealNetworkHandlerTest<H : NetworkHandler> : Abs
                 networkLogger.debug { "HeartbeatProcessor.doHeartbeatNow" }
             }
         })
-        set(KeyRefreshProcessor, object : KeyRefreshProcessor {
-            override suspend fun keyRefreshLoop(handler: NetworkHandler) {}
-            override suspend fun refreshKeysNow(handler: NetworkHandler) {}
-        })
-        set(ConfigPushProcessor, object : ConfigPushProcessor {
-            override suspend fun syncConfigPush(network: NetworkHandler) {}
-        })
+        set(KeyRefreshProcessor, KeyRefreshProcessorImpl(networkLogger))
+        set(ConfigPushProcessor, ConfigPushProcessorImpl(networkLogger))
 
         set(BotInitProcessor, object : BotInitProcessor {
             override suspend fun init() {
@@ -89,10 +71,11 @@ internal abstract class AbstractRealNetworkHandlerTest<H : NetworkHandler> : Abs
         set(OtherClientUpdater, OtherClientUpdaterImpl(bot, components, bot.logger))
         set(ConfigPushSyncer, ConfigPushSyncerImpl())
 
-        set(StateObserver, bot.run { stateObserverChain() })
+        set(StateObserver, StateObserver.NOP)
+
     }
 
-    protected open fun createHandler(additionalComponents: ComponentStorage? = null): H {
+    protected open fun createHandler(additionalComponents: ComponentStorage? = null): NetworkHandler {
         return factory.create(
             NetworkHandlerContextImpl(
                 bot,

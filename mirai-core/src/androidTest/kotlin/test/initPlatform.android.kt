@@ -10,36 +10,14 @@
 package net.mamoe.mirai.internal.test
 
 import net.mamoe.mirai.utils.MiraiLogger
-import org.bouncycastle.jce.provider.BouncyCastleProvider
-import org.junit.jupiter.api.Test
-import java.security.Security
-import kotlin.test.assertTrue
 
 internal actual fun initPlatform() {
     init
 }
 
-private val init: Unit by lazy {
+private val init by lazy {
     MiraiLogger.setDefaultLoggerCreator {
         @Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE")
         net.mamoe.mirai.internal.utils.StdoutLogger(it)
-    }
-
-    if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) != null) {
-        Security.removeProvider(BouncyCastleProvider.PROVIDER_NAME)
-    }
-    Security.addProvider(BouncyCastleProvider())
-
-    Unit
-}
-
-internal actual class PlatformInitializationTest : AbstractTest() {
-
-    @Test
-    actual fun test() {
-        assertTrue {
-            @Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE")
-            MiraiLogger.create("1") is net.mamoe.mirai.internal.utils.StdoutLogger
-        }
     }
 }

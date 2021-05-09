@@ -9,8 +9,6 @@
 
 package net.mamoe.mirai.internal.test
 
-import org.junit.jupiter.api.Test
-
 internal expect fun initPlatform()
 
 /**
@@ -20,9 +18,4 @@ abstract class AbstractTest {
     init {
         initPlatform()
     }
-}
-
-internal expect class PlatformInitializationTest() : AbstractTest {
-    @Test
-    fun test()
 }

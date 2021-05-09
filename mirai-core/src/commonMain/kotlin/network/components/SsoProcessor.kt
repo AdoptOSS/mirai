@@ -24,7 +24,6 @@ import net.mamoe.mirai.internal.network.handler.state.StateChangedObserver
 import net.mamoe.mirai.internal.network.handler.state.StateObserver
 import net.mamoe.mirai.internal.network.impl.netty.NettyNetworkHandler
 import net.mamoe.mirai.internal.network.protocol.packet.OutgoingPacketWithRespType
-import net.mamoe.mirai.internal.network.protocol.packet.login.StatSvc
 import net.mamoe.mirai.internal.network.protocol.packet.login.WtLogin.Login.LoginPacketResponse
 import net.mamoe.mirai.internal.network.protocol.packet.login.WtLogin.Login.LoginPacketResponse.Captcha
 import net.mamoe.mirai.internal.network.protocol.packet.login.wtlogin.WtLogin10
@@ -57,8 +56,6 @@ internal interface SsoProcessor {
      */
     @Throws(LoginFailedException::class)
     suspend fun login(handler: NetworkHandler)
-
-    suspend fun logout(handler: NetworkHandler)
 
     companion object : ComponentKey<SsoProcessor>
 }
@@ -111,10 +108,6 @@ internal class SsoProcessorImpl(
             SlowLoginImpl(handler).doLogin()
         }
         ssoContext.accountSecretsManager.saveSecrets(ssoContext.account, AccountSecretsImpl(client))
-    }
-
-    override suspend fun logout(handler: NetworkHandler) {
-        handler.sendWithoutExpect(StatSvc.Register.offline(client))
     }
 
     private fun createClient(bot: QQAndroidBot): QQAndroidClient {

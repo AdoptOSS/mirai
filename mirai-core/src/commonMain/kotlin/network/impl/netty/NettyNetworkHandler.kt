@@ -36,7 +36,7 @@ import java.net.SocketAddress
 import kotlin.coroutines.CoroutineContext
 import io.netty.channel.Channel as NettyChannel
 
-internal open class NettyNetworkHandler(
+internal class NettyNetworkHandler(
     context: NetworkHandlerContext,
     private val address: SocketAddress,
 ) : NetworkHandlerSupport(context) {
@@ -86,16 +86,7 @@ internal open class NettyNetworkHandler(
         }
     }
 
-    protected open fun setupChannelPipeline(pipeline: ChannelPipeline, decodePipeline: PacketDecodePipeline) {
-        pipeline
-            .addLast(OutgoingPacketEncoder())
-            .addLast(LengthFieldBasedFrameDecoder(Int.MAX_VALUE, 0, 4, -4, 4))
-            .addLast(ByteBufToIncomingPacketDecoder())
-            .addLast(RawIncomingPacketCollector(decodePipeline))
-    }
-
-    // can be overridden for tests
-    protected open suspend fun createConnection(decodePipeline: PacketDecodePipeline): NettyChannel {
+    private suspend fun createConnection(decodePipeline: PacketDecodePipeline): NettyChannel {
         val contextResult = CompletableDeferred<NettyChannel>()
         val eventLoopGroup = NioEventLoopGroup()
 
@@ -110,8 +101,10 @@ internal open class NettyNetworkHandler(
                                 eventLoopGroup.shutdownGracefully()
                             }
                         })
-
-                    setupChannelPipeline(ch.pipeline(), decodePipeline)
+                        .addLast(OutgoingPacketEncoder())
+                        .addLast(LengthFieldBasedFrameDecoder(Int.MAX_VALUE, 0, 4, -4, 4))
+                        .addLast(ByteBufToIncomingPacketDecoder())
+                        .addLast(RawIncomingPacketCollector(decodePipeline))
                 }
             })
             .connect(address)
@@ -132,9 +125,9 @@ internal open class NettyNetworkHandler(
         return contextResult.await()
     }
 
-    protected val decodePipeline = PacketDecodePipeline(this@NettyNetworkHandler.coroutineContext)
+    private val decodePipeline = PacketDecodePipeline(this@NettyNetworkHandler.coroutineContext)
 
-    protected inner class PacketDecodePipeline(parentContext: CoroutineContext) :
+    private inner class PacketDecodePipeline(parentContext: CoroutineContext) :
         CoroutineScope by parentContext.childScope() {
         private val channel: Channel<RawIncomingPacket> = Channel(Channel.BUFFERED)
         private val packetCodec: PacketCodec by lazy { context[PacketCodec] }
@@ -166,13 +159,13 @@ internal open class NettyNetworkHandler(
      *
      * @see StateObserver
      */
-    protected abstract inner class NettyState(
+    private abstract inner class NettyState(
         correspondingState: State
     ) : BaseStateImpl(correspondingState) {
         abstract suspend fun sendPacketImpl(packet: OutgoingPacket)
     }
 
-    protected inner class StateInitialized : NettyState(State.INITIALIZED) {
+    private inner class StateInitialized : NettyState(State.INITIALIZED) {
         override suspend fun sendPacketImpl(packet: OutgoingPacket) {
             error("Cannot send packet when connection is not set. (resumeConnection not called.)")
         }
@@ -188,20 +181,16 @@ internal open class NettyNetworkHandler(
     /**
      * 1. Connect to server.
      * 2. Perform SSO login with [SsoProcessor]
-     *
-     * If failure, set state to [StateClosed]
-     * If success, set state to [StateOK]
+     * 3. If failure, set state to [StateClosed]
+     * 4. If success, set state to [StateOK]
      */
-    protected inner class StateConnecting(
+    private inner class StateConnecting(
         /**
          * Collected (suppressed) exceptions that have led this state.
          *
          * Dropped when state becomes [StateOK].
          */
         private val collectiveExceptions: ExceptionCollector,
-        /**
-         * If `true`, [delay] 5 seconds before connecting.
-         */
         wait: Boolean = false
     ) : NettyState(State.CONNECTING) {
         private val connection = async {
@@ -249,7 +238,7 @@ internal open class NettyNetworkHandler(
      * @see BotInitProcessor
      * @see StateObserver
      */
-    protected inner class StateLoading(
+    private inner class StateLoading(
         private val connection: NettyChannel
     ) : NettyState(State.LOADING) {
         override suspend fun sendPacketImpl(packet: OutgoingPacket) {
@@ -267,7 +256,7 @@ internal open class NettyNetworkHandler(
         override fun toString(): String = "StateLoading"
     }
 
-    protected inner class StateOK(
+    private inner class StateOK(
         private val connection: NettyChannel
     ) : NettyState(State.OK) {
         init {
@@ -328,7 +317,7 @@ internal open class NettyNetworkHandler(
         override fun toString(): String = "StateOK"
     }
 
-    protected inner class StateClosed(
+    private inner class StateClosed(
         val exception: Throwable?
     ) : NettyState(State.CLOSED) {
         init {
