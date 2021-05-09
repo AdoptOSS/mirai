@@ -142,8 +142,6 @@ internal abstract class NetworkHandlerSupport(
         val correspondingState: NetworkHandler.State,
     ) : CoroutineScope by CoroutineScope(coroutineContext + Job(coroutineContext.job)) {
 
-        open fun getCause(): Throwable? = null
-
         /**
          * May throw any exception that caused the state to fail.
          */
