@@ -15,7 +15,7 @@ import net.mamoe.mirai.internal.network.handler.NetworkHandlerSupport
 internal abstract class StateChangedObserver(
     val state: State,
 ) : StateObserver {
-    protected abstract fun stateChanged0(
+    abstract fun stateChanged0(
         networkHandler: NetworkHandlerSupport,
         previous: NetworkHandlerSupport.BaseStateImpl,
         new: NetworkHandlerSupport.BaseStateImpl

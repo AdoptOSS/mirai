@@ -9,21 +9,7 @@
 
 package net.mamoe.mirai.utils
 
-import kotlin.contracts.InvocationKind
-import kotlin.contracts.contract
-
 public class ExceptionCollector {
-    public constructor()
-    public constructor(initial: Throwable?) {
-        collect(initial)
-    }
-
-    public constructor(vararg initials: Throwable?) {
-        for (initial in initials) {
-            collect(initial)
-        }
-    }
-
     @Volatile
     private var last: Throwable? = null
 
@@ -35,11 +21,6 @@ public class ExceptionCollector {
             e.addSuppressed(last)
         }
         this.last = e
-    }
-
-    public fun collectGet(e: Throwable?): Throwable {
-        this.collect(e)
-        return getLast()!!
     }
 
     /**
@@ -63,16 +44,7 @@ public class ExceptionCollector {
  * Run with a coverage of `throw`. All thrown exceptions will be caught and rethrown with [ExceptionCollector.collectThrow]
  */
 public inline fun <R> withExceptionCollector(action: ExceptionCollector.() -> R): R {
-    contract { callsInPlace(action, InvocationKind.EXACTLY_ONCE) }
-    return ExceptionCollector().withExceptionCollector(action)
-}
-
-/**
- * Run with a coverage of `throw`. All thrown exceptions will be caught and rethrown with [ExceptionCollector.collectThrow]
- */
-public inline fun <R> ExceptionCollector.withExceptionCollector(action: ExceptionCollector.() -> R): R {
-    contract { callsInPlace(action, InvocationKind.EXACTLY_ONCE) }
-    this.run {
+    ExceptionCollector().run {
         try {
             return action()
         } catch (e: Throwable) {

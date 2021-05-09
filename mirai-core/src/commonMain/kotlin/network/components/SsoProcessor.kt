@@ -9,6 +9,8 @@
 
 package net.mamoe.mirai.internal.network.components
 
+import kotlinx.coroutines.CoroutineName
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import net.mamoe.mirai.internal.QQAndroidBot
 import net.mamoe.mirai.internal.network.Packet
@@ -18,7 +20,6 @@ import net.mamoe.mirai.internal.network.context.AccountSecretsImpl
 import net.mamoe.mirai.internal.network.context.SsoProcessorContext
 import net.mamoe.mirai.internal.network.context.SsoSession
 import net.mamoe.mirai.internal.network.handler.NetworkHandler
-import net.mamoe.mirai.internal.network.handler.NetworkHandler.State
 import net.mamoe.mirai.internal.network.handler.NetworkHandlerSupport
 import net.mamoe.mirai.internal.network.handler.state.StateChangedObserver
 import net.mamoe.mirai.internal.network.handler.state.StateObserver
@@ -37,9 +38,6 @@ import net.mamoe.mirai.utils.LoginSolver
 import net.mamoe.mirai.utils.info
 import net.mamoe.mirai.utils.withExceptionCollector
 
-/**
- * Handles login, and acts also as a mediator of [BotInitProcessor], []
- */
 internal interface SsoProcessor {
     val ssoContext: SsoProcessorContext
     val client: QQAndroidClient
@@ -71,17 +69,12 @@ internal interface SsoProcessor {
 internal class SsoProcessorImpl(
     override val ssoContext: SsoProcessorContext,
 ) : SsoProcessor {
-
-    ///////////////////////////////////////////////////////////////////////////
-    // public
-    ///////////////////////////////////////////////////////////////////////////
-
     @Volatile
     override var client = createClient(ssoContext.bot)
 
     override val ssoSession: SsoSession get() = client
     override fun createObserverChain(): StateObserver = StateObserver.chainOfNotNull(
-        object : StateChangedObserver(State.OK) {
+        object : StateChangedObserver(NetworkHandler.State.OK) {
             override fun stateChanged0(
                 networkHandler: NetworkHandlerSupport,
                 previous: NetworkHandlerSupport.BaseStateImpl,
@@ -123,7 +116,17 @@ internal class SsoProcessorImpl(
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    // login
+    // state observers
+    ///////////////////////////////////////////////////////////////////////////
+
+    private fun CoroutineScope.launchHeartbeat() = launch(CoroutineName("")) {
+
+    }
+
+    private inner class HeartbeatHandler
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Login methods
     ///////////////////////////////////////////////////////////////////////////
 
     // we have exactly two methods----slow and fast.
