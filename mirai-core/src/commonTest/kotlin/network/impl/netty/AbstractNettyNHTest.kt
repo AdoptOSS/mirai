@@ -11,7 +11,6 @@ package net.mamoe.mirai.internal.network.impl.netty
 
 import io.netty.channel.Channel
 import io.netty.channel.embedded.EmbeddedChannel
-import kotlinx.coroutines.CompletableDeferred
 import net.mamoe.mirai.internal.network.framework.AbstractRealNetworkHandlerTest
 import net.mamoe.mirai.internal.network.handler.NetworkHandlerContext
 import net.mamoe.mirai.internal.network.handler.NetworkHandlerFactory
@@ -29,10 +28,6 @@ internal open class TestNettyNH(
 
     fun setStateConnecting(exception: Throwable? = null) {
         setState { StateConnecting(ExceptionCollector(exception), false) }
-    }
-
-    fun setStateOK(channel: Channel, exception: Throwable? = null) {
-        setState { StateOK(channel, CompletableDeferred(Unit)) }
     }
 
     fun setStateLoading(channel: Channel) {

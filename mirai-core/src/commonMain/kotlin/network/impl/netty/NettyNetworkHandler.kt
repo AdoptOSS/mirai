@@ -228,7 +228,7 @@ internal open class NettyNetworkHandler(
                     if (error is StateSwitchingException && error.new is StateConnecting) {
                         return@invokeOnCompletion // already been switching to CONNECTING
                     }
-                    setState(null) { // ignore replication check
+                    setState {
                         StateConnecting(
                             collectiveExceptions.apply { collect(error) },
                             wait = true
@@ -302,49 +302,29 @@ internal open class NettyNetworkHandler(
 
         private val heartbeatProcessor = context[HeartbeatProcessor]
 
-        @Suppress("DeferredIsResult")
-        private inline fun launchHeartbeatJob(
-            name: String,
-            crossinline timeout: () -> Long,
-            crossinline action: suspend () -> Unit
-        ): Deferred<Unit> {
-            return async(CoroutineName("$name Scheduler")) {
-                while (isActive) {
-                    try {
-                        delay(timeout())
-                    } catch (e: CancellationException) {
-                        return@async // considered normally cancel
-                    }
-
-                    try {
-                        action()
-                        heartbeatProcessor.doAliveHeartbeatNow(this@NettyNetworkHandler)
-                    } catch (e: Throwable) {
-                        setState {
-                            StateConnecting(ExceptionCollector(IllegalStateException("Exception in $name job", e)))
-                        }
-                    }
+        private val heartbeat = async(CoroutineName("Heartbeat Scheduler")) {
+            while (isActive) {
+                try {
+                    delay(context[SsoProcessorContext].configuration.heartbeatPeriodMillis)
+                } catch (e: CancellationException) {
+                    return@async // considered normally cancel
                 }
-            }.apply {
-                invokeOnCompletion { e ->
-                    if (e != null) {
-                        logger.info { "$name failed: $e." }
+
+                try {
+                    heartbeatProcessor.doHeartbeatNow(this@NettyNetworkHandler)
+                } catch (e: Throwable) {
+                    setState {
+                        StateConnecting(ExceptionCollector(IllegalStateException("Exception in Heartbeat job", e)))
                     }
                 }
             }
+        }.apply {
+            invokeOnCompletion { e ->
+                if (e != null) {
+                    logger.info { "Heartbeat failed: $e." }
+                }
+            }
         }
-
-        private val heartbeat = launchHeartbeatJob(
-            "AliveHeartbeat",
-            { context[SsoProcessorContext].configuration.heartbeatTimeoutMillis },
-            { heartbeatProcessor.doAliveHeartbeatNow(this@NettyNetworkHandler) }
-        )
-
-        private val statHeartbeat = launchHeartbeatJob(
-            "StatHeartbeat",
-            { context[SsoProcessorContext].configuration.statHeartbeatPeriodMillis },
-            { heartbeatProcessor.doStatHeartbeatNow(this@NettyNetworkHandler) }
-        )
 
         // we can also move them as observers if needed.
 

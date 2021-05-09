@@ -87,14 +87,9 @@ internal abstract class AbstractRealNetworkHandlerTest<H : NetworkHandler> : Abs
             }
         })
         set(HeartbeatProcessor, object : HeartbeatProcessor {
-            override suspend fun doAliveHeartbeatNow(networkHandler: NetworkHandler) {
+            override suspend fun doHeartbeatNow(networkHandler: NetworkHandler) {
                 nhEvents.add(NHEvent.DoHeartbeatNow)
-                networkLogger.debug { "HeartbeatProcessor.doAliveHeartbeatNow" }
-            }
-
-            override suspend fun doStatHeartbeatNow(networkHandler: NetworkHandler) {
-                nhEvents.add(NHEvent.DoHeartbeatNow)
-                networkLogger.debug { "HeartbeatProcessor.doStatHeartbeatNow" }
+                networkLogger.debug { "HeartbeatProcessor.doHeartbeatNow" }
             }
         })
         set(KeyRefreshProcessor, object : KeyRefreshProcessor {
