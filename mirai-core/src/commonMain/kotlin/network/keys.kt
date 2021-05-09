@@ -67,9 +67,8 @@ internal class LoginExtraData(
     }
 }
 
-@Suppress("ArrayInDataClass") // for `copy`
 @Serializable
-internal data class WLoginSigInfo(
+internal class WLoginSigInfo(
     val uin: Long,
     var encryptA1: ByteArray?, // sigInfo[0]
     /**
