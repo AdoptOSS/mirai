@@ -229,11 +229,10 @@ internal open class NettyNetworkHandler(
                         return@invokeOnCompletion // already been switching to CONNECTING
                     }
                     setState(null) { // ignore replication check
-//                        StateConnecting(
-//                            collectiveExceptions.apply { collect(error) },
-//                            wait = true
-//                        )
-                        StateClosed(collectiveExceptions.collectGet(error))
+                        StateConnecting(
+                            collectiveExceptions.apply { collect(error) },
+                            wait = true
+                        )
                     } // logon failure closes the network handler.
                 }
                 // and this error will also be thrown by `StateConnecting.resumeConnection`
@@ -266,15 +265,6 @@ internal open class NettyNetworkHandler(
     protected inner class StateLoading(
         private val connection: NettyChannel
     ) : NettyState(State.LOADING) {
-        init {
-            coroutineContext.job.invokeOnCompletion {
-                if (it != null && it !is CancellationException && it !is StateSwitchingException) {
-                    connection.close()
-                    setState { StateClosed(it) }
-                }
-            }
-        }
-
         override suspend fun sendPacketImpl(packet: OutgoingPacket): Boolean {
             connection.writeAndFlush(packet)
             return true
