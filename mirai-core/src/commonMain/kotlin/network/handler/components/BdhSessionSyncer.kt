@@ -15,7 +15,6 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.SetSerializer
 import net.mamoe.mirai.internal.network.JsonForCache
 import net.mamoe.mirai.internal.network.ProtoBufForCache
-import net.mamoe.mirai.internal.network.handler.component.ComponentKey
 import net.mamoe.mirai.internal.network.handler.context.BdhSession
 import net.mamoe.mirai.internal.utils.actualCacheDir
 import net.mamoe.mirai.utils.BotConfiguration
@@ -25,36 +24,19 @@ import java.io.File
 private val ServerListSerializer: KSerializer<Set<ServerAddress>> =
     SetSerializer(ServerAddress.serializer())
 
-internal interface BdhSessionSyncer {
-    var bdhSession: CompletableDeferred<BdhSession>
+@OptIn(ExperimentalCoroutinesApi::class)
+internal class BdhSessionSyncer(
+    private val configuration: BotConfiguration,
+    private val serverList: ServerList,
+    private val logger: MiraiLogger,
+) {
+    var bdhSession: CompletableDeferred<BdhSession> = CompletableDeferred()
     val hasSession: Boolean
+        get() = kotlin.runCatching { bdhSession.getCompleted() }.isSuccess
 
     fun overrideSession(
         session: BdhSession,
         doSave: Boolean = true
-    )
-
-    fun loadServerListFromCache()
-    fun loadFromCache()
-    fun saveServerListToCache()
-    fun saveToCache()
-
-    companion object : ComponentKey<BdhSessionSyncer>
-}
-
-@OptIn(ExperimentalCoroutinesApi::class)
-internal class BdhSessionSyncerImpl(
-    private val configuration: BotConfiguration,
-    private val serverList: ServerList,
-    private val logger: MiraiLogger,
-) : BdhSessionSyncer {
-    override var bdhSession: CompletableDeferred<BdhSession> = CompletableDeferred()
-    override val hasSession: Boolean
-        get() = kotlin.runCatching { bdhSession.getCompleted() }.isSuccess
-
-    override fun overrideSession(
-        session: BdhSession,
-        doSave: Boolean
     ) {
         bdhSession.complete(session)
         bdhSession = CompletableDeferred(session)
@@ -68,7 +50,7 @@ internal class BdhSessionSyncerImpl(
     private val serverListCacheFile: File
         get() = configuration.actualCacheDir().resolve("servers.json")
 
-    override fun loadServerListFromCache() {
+    fun loadServerListFromCache() {
         val serverListCacheFile = this.serverListCacheFile
         if (serverListCacheFile.isFile) {
             logger.verbose("Loading server list from cache.")
@@ -83,7 +65,7 @@ internal class BdhSessionSyncerImpl(
         }
     }
 
-    override fun loadFromCache() {
+    fun loadFromCache() {
         val sessionCacheFile = this.sessionCacheFile
         if (sessionCacheFile.isFile) {
             logger.verbose("Loading BdhSession from cache file")
@@ -101,7 +83,7 @@ internal class BdhSessionSyncerImpl(
         }
     }
 
-    override fun saveServerListToCache() {
+    fun saveServerListToCache() {
         val serverListCacheFile = this.serverListCacheFile
         serverListCacheFile.parentFile?.mkdirs()
 
@@ -118,7 +100,7 @@ internal class BdhSessionSyncerImpl(
         }
     }
 
-    override fun saveToCache() {
+    fun saveToCache() {
         val sessionCacheFile = this.sessionCacheFile
         sessionCacheFile.parentFile?.mkdirs()
         if (bdhSession.isCompleted) {

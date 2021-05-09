@@ -13,7 +13,6 @@ import net.mamoe.mirai.internal.QQAndroidBot
 import net.mamoe.mirai.internal.network.Packet
 import net.mamoe.mirai.internal.network.QQAndroidClient
 import net.mamoe.mirai.internal.network.handler.NetworkHandler
-import net.mamoe.mirai.internal.network.handler.component.ComponentKey
 import net.mamoe.mirai.internal.network.handler.context.AccountSecretsImpl
 import net.mamoe.mirai.internal.network.handler.context.SsoProcessorContext
 import net.mamoe.mirai.internal.network.handler.context.SsoSession
@@ -32,20 +31,6 @@ import net.mamoe.mirai.utils.LoginSolver
 import net.mamoe.mirai.utils.info
 import net.mamoe.mirai.utils.withExceptionCollector
 
-internal interface SsoProcessor {
-    val ssoContext: SsoProcessorContext
-    val client: QQAndroidClient
-    val ssoSession: SsoSession
-
-    /**
-     * Do login. Throws [LoginFailedException] if failed
-     */
-    @Throws(LoginFailedException::class)
-    suspend fun login(handler: NetworkHandler)
-
-    companion object : ComponentKey<SsoProcessor>
-}
-
 /**
  * Strategy that performs the process of single sing-on (SSO). (login)
  *
@@ -53,19 +38,19 @@ internal interface SsoProcessor {
  *
  * Used by [NettyNetworkHandler.StateConnecting].
  */
-internal class SsoProcessorImpl(
-    override val ssoContext: SsoProcessorContext,
-) : SsoProcessor {
+internal class SsoProcessor(
+    internal val ssoContext: SsoProcessorContext,
+) {
     @Volatile
-    override var client = createClient(ssoContext.bot)
+    internal var client = createClient(ssoContext.bot)
 
-    override val ssoSession: SsoSession get() = client
+    internal val ssoSession: SsoSession get() = client
 
     /**
      * Do login. Throws [LoginFailedException] if failed
      */
     @Throws(LoginFailedException::class)
-    override suspend fun login(handler: NetworkHandler) = withExceptionCollector {
+    suspend fun login(handler: NetworkHandler) = withExceptionCollector {
         if (client.wLoginSigInfoInitialized) {
             kotlin.runCatching {
                 FastLoginImpl(handler).doLogin()

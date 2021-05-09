@@ -11,7 +11,6 @@ package net.mamoe.mirai.internal.network.handler.components
 
 import net.mamoe.mirai.Bot
 import net.mamoe.mirai.internal.BotAccount
-import net.mamoe.mirai.internal.network.handler.component.ComponentKey
 import net.mamoe.mirai.internal.network.handler.context.AccountSecrets
 import net.mamoe.mirai.internal.network.handler.context.AccountSecretsImpl
 import net.mamoe.mirai.internal.utils.actualCacheDir
@@ -34,8 +33,6 @@ import java.io.File
 internal interface AccountSecretsManager {
     fun saveSecrets(account: BotAccount, secrets: AccountSecrets)
     fun getSecrets(account: BotAccount): AccountSecrets?
-
-    companion object : ComponentKey<BdhSessionSyncer>
 }
 
 internal fun AccountSecretsManager.getSecretsOrCreate(account: BotAccount, device: DeviceInfo): AccountSecrets {
