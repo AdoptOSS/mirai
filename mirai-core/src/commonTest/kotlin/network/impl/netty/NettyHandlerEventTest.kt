@@ -10,13 +10,10 @@
 package net.mamoe.mirai.internal.network.impl.netty
 
 import kotlinx.coroutines.delay
-import net.mamoe.mirai.event.Event
 import net.mamoe.mirai.event.events.BotOfflineEvent
 import net.mamoe.mirai.event.events.BotOnlineEvent
 import net.mamoe.mirai.event.events.BotReloginEvent
 import net.mamoe.mirai.internal.network.handler.NetworkHandler.State
-import net.mamoe.mirai.internal.network.handler.NetworkHandler.State.INITIALIZED
-import net.mamoe.mirai.internal.network.handler.NetworkHandler.State.OK
 import net.mamoe.mirai.internal.test.assertEventBroadcasts
 import net.mamoe.mirai.internal.test.runBlockingUnit
 import kotlin.test.Test
@@ -28,47 +25,46 @@ internal class NettyHandlerEventTest : AbstractNettyNHTest() {
     @Test
     fun `BotOnlineEvent after successful logon`() = runBlockingUnit {
         assertEventBroadcasts<BotOnlineEvent> {
-            assertEquals(INITIALIZED, network.state)
+            assertEquals(State.INITIALIZED, network.state)
             bot.login() // launches a job which broadcasts the event
             delay(3.seconds)
-            assertEquals(OK, network.state)
+            assertEquals(State.OK, network.state)
         }
     }
 
     @Test
     fun `BotReloginEvent after successful reconnection`() = runBlockingUnit {
         assertEventBroadcasts<BotReloginEvent> {
-            assertEquals(INITIALIZED, network.state)
+            assertEquals(State.INITIALIZED, network.state)
             bot.login()
             bot.firstLoginSucceed = true
             network.setStateConnecting()
             network.resumeConnection()
             delay(3.seconds) // `login` launches a job which broadcasts the event
-            assertEquals(OK, network.state)
+            assertEquals(State.OK, network.state)
         }
     }
 
     @Test
     fun `BotOnlineEvent after successful reconnection`() = runBlockingUnit {
-        assertEquals(INITIALIZED, network.state)
+        assertEquals(State.INITIALIZED, network.state)
         bot.login()
         bot.firstLoginSucceed = true
-        assertEquals(OK, network.state)
         delay(3.seconds) // `login` launches a job which broadcasts the event
         assertEventBroadcasts<BotOnlineEvent>(1) {
             network.setStateConnecting()
             network.resumeConnection()
             delay(3.seconds)
-            assertEquals(OK, network.state)
+            assertEquals(State.OK, network.state)
         }
     }
 
     @Test
     fun `BotOfflineEvent after successful reconnection`() = runBlockingUnit {
-        assertEquals(INITIALIZED, network.state)
+        assertEquals(State.INITIALIZED, network.state)
         bot.login()
         bot.firstLoginSucceed = true
-        assertEquals(OK, network.state)
+        assertEquals(State.OK, network.state)
         delay(3.seconds) // `login` launches a job which broadcasts the event
         assertEventBroadcasts<BotOfflineEvent>(1) {
             network.setStateClosed()
@@ -76,27 +72,4 @@ internal class NettyHandlerEventTest : AbstractNettyNHTest() {
             assertEquals(State.CLOSED, network.state)
         }
     }
-
-
-    private fun noEventOn(setState: () -> Unit) = runBlockingUnit {
-        assertState(INITIALIZED)
-        bot.login()
-        bot.firstLoginSucceed = true
-        assertState(OK)
-        network.setStateConnecting()
-        delay(3.seconds) // `login` launches a job which broadcasts the event
-        assertEventBroadcasts<Event>(0) {
-            setState()
-            delay(3.seconds)
-        }
-    }
-
-    @Test
-    fun `no event from CONNECTING TO CLOSED`() = noEventOn { network.setStateConnecting() }
-
-    @Test
-    fun `no event from CLOSED TO CLOSED`() = noEventOn { network.setStateClosed() }
-
-    @Test
-    fun `no event from INITIALIZED TO CLOSED`() = noEventOn { }
 }

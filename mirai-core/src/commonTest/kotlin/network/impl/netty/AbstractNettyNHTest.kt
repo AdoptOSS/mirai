@@ -30,10 +30,6 @@ internal open class TestNettyNH(
         setState { StateConnecting(ExceptionCollector(exception), false) }
     }
 
-    fun setStateLoading(channel: Channel) {
-        setState { StateLoading(channel) }
-    }
-
 }
 
 internal abstract class AbstractNettyNHTest : AbstractRealNetworkHandlerTest<TestNettyNH>() {
