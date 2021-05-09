@@ -29,7 +29,6 @@ import net.mamoe.mirai.internal.contact.createOtherClient
 import net.mamoe.mirai.internal.message.contextualBugReportException
 import net.mamoe.mirai.internal.network.*
 import net.mamoe.mirai.internal.network.components.ContactCacheService
-import net.mamoe.mirai.internal.network.components.ContactUpdater
 import net.mamoe.mirai.internal.network.protocol.data.jce.*
 import net.mamoe.mirai.internal.network.protocol.data.proto.Oidb0x769
 import net.mamoe.mirai.internal.network.protocol.data.proto.StatSvcGetOnline
@@ -233,6 +232,11 @@ internal class StatSvc {
         }
 
 
+        private fun String.ipToLong(): Long {
+            return split('.').foldIndexed(0L) { index: Int, acc: Long, s: String ->
+                acc or (((s.toLongOrNull() ?: 0) shl (index * 16)))
+            }
+        }
     }
 
     internal object ReqMSFOffline :
@@ -279,7 +283,7 @@ internal class StatSvc {
         IncomingPacketFactory<Packet?>("StatSvc.SvcReqMSFLoginNotify", "StatSvc.SvcReqMSFLoginNotify") {
 
         override suspend fun ByteReadPacket.decode(bot: QQAndroidBot, sequenceId: Int): Packet? =
-            bot.components[ContactUpdater].otherClientsLock.withLock {
+            bot.otherClientsLock.withLock {
                 val notify = readUniPacket(SvcReqMSFLoginNotifyData.serializer())
 
                 val appId = notify.iAppId.toInt()

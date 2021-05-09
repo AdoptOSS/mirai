@@ -25,7 +25,6 @@ import net.mamoe.mirai.internal.contact.appId
 import net.mamoe.mirai.internal.contact.createOtherClient
 import net.mamoe.mirai.internal.message.contextualBugReportException
 import net.mamoe.mirai.internal.network.Packet
-import net.mamoe.mirai.internal.network.components.ContactUpdater
 import net.mamoe.mirai.internal.network.handler.logger
 import net.mamoe.mirai.internal.network.protocol.data.jce.RequestPushStatus
 import net.mamoe.mirai.internal.network.protocol.packet.IncomingPacketFactory
@@ -37,7 +36,7 @@ internal object MessageSvcRequestPushStatus : IncomingPacketFactory<Packet?>(
 ) {
     override suspend fun ByteReadPacket.decode(bot: QQAndroidBot, sequenceId: Int): Packet? {
         val packet = readUniPacket(RequestPushStatus.serializer())
-        bot.components[ContactUpdater].otherClientsLock.withLock {
+        bot.otherClientsLock.withLock {
             val instanceInfo = packet.vecInstanceList?.firstOrNull()
             val appId = instanceInfo?.iAppId ?: 1
             return when (packet.status.toInt()) {
