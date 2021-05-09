@@ -9,6 +9,8 @@
 
 package net.mamoe.mirai.internal.network.components
 
+import kotlinx.coroutines.CoroutineName
+import kotlinx.coroutines.CoroutineScope
 import net.mamoe.mirai.event.BroadcastControllable
 import net.mamoe.mirai.event.CancellableEvent
 import net.mamoe.mirai.event.Event
@@ -61,7 +63,9 @@ internal class LoggingPacketHandlerAdapter(
 }
 
 internal class EventBroadcasterPacketHandler(
+    private val targetScope: CoroutineScope,
     private val components: ComponentStorage,
+    private val logger: MiraiLogger,
 ) : PacketHandler {
 
     override suspend fun handlePacket(incomingPacket: IncomingPacket) {
@@ -69,6 +73,7 @@ internal class EventBroadcasterPacketHandler(
         impl(data)
     }
 
+    private val coroutineName = CoroutineName("Mirai-EventDispatcher-${logger.identity}")
     private fun impl(packet: Packet) {
         if (packet is MultiPacket<*>) {
             for (p in packet) {
