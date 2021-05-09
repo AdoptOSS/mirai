@@ -47,8 +47,6 @@ internal class NetworkHandlerContextImpl(
 internal interface NetworkHandler {
     val context: NetworkHandlerContext
 
-    fun isOk() = state == State.OK
-
     /**
      * State of this handler.
      */
