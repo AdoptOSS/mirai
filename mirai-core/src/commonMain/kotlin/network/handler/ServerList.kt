@@ -77,8 +77,7 @@ internal class ServerList(
                 |157.255.13.77:14000, 120.232.18.27:443, 
                 |183.3.235.162:14000, 163.177.89.195:443, 183.232.94.44:80, 
                 |203.205.255.224:8080, 203.205.255.221:8080""".trimMargin()
-                .splitToSequence(",").filterNot(String::isBlank)
-                .map { it.trim() }
+                .split(", ", "\n").filterNot(String::isBlank)
                 .map {
                     val host = it.substringBefore(':')
                     val port = it.substringAfter(':').toInt()

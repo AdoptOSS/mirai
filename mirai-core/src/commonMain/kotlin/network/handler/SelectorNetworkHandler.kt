@@ -10,9 +10,7 @@
 package net.mamoe.mirai.internal.network.handler
 
 import kotlinx.atomicfu.atomic
-import net.mamoe.mirai.internal.network.handler.NetworkHandler.State
 import net.mamoe.mirai.internal.network.protocol.packet.OutgoingPacket
-import org.jetbrains.annotations.TestOnly
 
 /**
  * A proxy to [NetworkHandler] that delegates calls to instance returned by [NetworkHandlerSelector.awaitResumeInstance].
@@ -28,8 +26,8 @@ internal class SelectorNetworkHandler(
 ) : NetworkHandler {
     private suspend inline fun instance(): NetworkHandler = selector.awaitResumeInstance()
 
-    override val state: State
-        get() = selector.getResumedInstance()?.state ?: State.INITIALIZED
+    override val state: NetworkHandler.State
+        get() = selector.getResumedInstance()?.state ?: NetworkHandler.State.INITIALIZED
 
     override suspend fun resumeConnection() {
         instance() // the selector will resume connection for us.
@@ -82,11 +80,6 @@ internal interface NetworkHandlerSelector<H : NetworkHandler> {
 internal abstract class AbstractKeepAliveNetworkHandlerSelector<H : NetworkHandler> : NetworkHandlerSelector<H> {
     private val current = atomic<H?>(null)
 
-    @TestOnly
-    internal fun setCurrent(h: H) {
-        current.value = h
-    }
-
     protected abstract fun createInstance(): H
 
     final override fun getResumedInstance(): H? = current.value
@@ -96,16 +89,14 @@ internal abstract class AbstractKeepAliveNetworkHandlerSelector<H : NetworkHandl
         val current = getResumedInstance()
         return if (current != null) {
             when (current.state) {
-                State.CLOSED -> {
+                NetworkHandler.State.OK -> current
+                NetworkHandler.State.CLOSED -> {
                     this.current.compareAndSet(current, null) // invalidate the instance and try again.
-                    awaitResumeInstance() // will create new instance.
+                    awaitResumeInstance()
                 }
-                State.CONNECTING,
-                State.CONNECTION_LOST,
-                State.INITIALIZED,
-                State.OK -> {
-                    current.resumeConnection()
-                    return current
+                else -> {
+                    current.resumeConnection() // try to advance state.
+                    awaitResumeInstance()
                 }
             }
         } else {
