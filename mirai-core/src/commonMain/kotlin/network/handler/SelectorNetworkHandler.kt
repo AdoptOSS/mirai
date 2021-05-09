@@ -42,8 +42,6 @@ internal class SelectorNetworkHandler(
     override fun close(cause: Throwable?) {
         selector.getResumedInstance()?.close(cause)
     }
-
-    override fun toString(): String = "SelectorNetworkHandler(currentInstance=${selector.getResumedInstance()})"
 }
 
 internal class ExceptionInSelectorResumeException(

@@ -11,12 +11,14 @@ package net.mamoe.mirai.internal.network.handler.impl.netty
 
 import io.netty.bootstrap.Bootstrap
 import io.netty.buffer.ByteBuf
-import io.netty.channel.*
+import io.netty.channel.ChannelHandlerContext
+import io.netty.channel.ChannelInboundHandlerAdapter
+import io.netty.channel.ChannelInitializer
+import io.netty.channel.SimpleChannelInboundHandler
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder
-import io.netty.handler.codec.MessageToByteEncoder
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.sendBlocking
@@ -25,24 +27,20 @@ import kotlinx.coroutines.flow.consumeAsFlow
 import net.mamoe.mirai.internal.network.handler.NetworkHandler
 import net.mamoe.mirai.internal.network.handler.NetworkHandlerContext
 import net.mamoe.mirai.internal.network.handler.impl.NetworkHandlerSupport
-import net.mamoe.mirai.internal.network.handler.logger
 import net.mamoe.mirai.internal.network.net.protocol.PacketCodec
 import net.mamoe.mirai.internal.network.net.protocol.RawIncomingPacket
 import net.mamoe.mirai.internal.network.net.protocol.SsoProcessor
 import net.mamoe.mirai.internal.network.protocol.packet.OutgoingPacket
 import net.mamoe.mirai.utils.childScope
-import net.mamoe.mirai.utils.debug
 import java.net.SocketAddress
 import kotlin.coroutines.CoroutineContext
-import io.netty.channel.Channel as NettyChannel
 
 internal class NettyNetworkHandler(
     context: NetworkHandlerContext,
     private val address: SocketAddress,
 ) : NetworkHandlerSupport(context) {
     override fun close(cause: Throwable?) {
-        setState { StateClosed(CancellationException("Closed manually.", cause)) }
-        // wrap an exception, more stacktrace information
+        setState { StateClosed(cause) }
     }
 
     private fun closeSuper(cause: Throwable?) = super.close(cause)
@@ -50,10 +48,6 @@ internal class NettyNetworkHandler(
     override suspend fun sendPacketImpl(packet: OutgoingPacket) {
         val state = _state as NettyState
         state.sendPacketImpl(packet)
-    }
-
-    override fun toString(): String {
-        return "NettyNetworkHandler(context=$context, address=$address)"
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -76,38 +70,31 @@ internal class NettyNetworkHandler(
         }
     }
 
-    private inner class OutgoingPacketEncoder : MessageToByteEncoder<OutgoingPacket>(OutgoingPacket::class.java) {
-        override fun encode(ctx: ChannelHandlerContext, msg: OutgoingPacket, out: ByteBuf) {
-            logger.debug { "encode: $msg" }
-            out.writeBytes(msg.delegate)
-        }
-    }
-
-    private suspend fun createConnection(decodePipeline: PacketDecodePipeline): NettyChannel {
-        val contextResult = CompletableDeferred<NettyChannel>()
+    private suspend fun createConnection(decodePipeline: PacketDecodePipeline): ChannelHandlerContext {
+        val contextResult = CompletableDeferred<ChannelHandlerContext>()
         val eventLoopGroup = NioEventLoopGroup()
 
         val future = Bootstrap().group(eventLoopGroup)
             .channel(NioSocketChannel::class.java)
-            .option(ChannelOption.SO_KEEPALIVE, true)
             .handler(object : ChannelInitializer<SocketChannel>() {
                 override fun initChannel(ch: SocketChannel) {
                     ch.pipeline()
                         .addLast(object : ChannelInboundHandlerAdapter() {
+                            override fun channelActive(ctx: ChannelHandlerContext) {
+                                contextResult.complete(ctx)
+                            }
+
                             override fun channelInactive(ctx: ChannelHandlerContext?) {
                                 eventLoopGroup.shutdownGracefully()
                             }
                         })
-                        .addLast(OutgoingPacketEncoder())
-                        .addLast(LengthFieldBasedFrameDecoder(Int.MAX_VALUE, 0, 4, -4, 4))
+                        .addLast(LengthFieldBasedFrameDecoder(Int.MAX_VALUE, 0, 4, -4, 0))
                         .addLast(ByteBufToIncomingPacketDecoder())
                         .addLast(RawIncomingPacketCollector(decodePipeline))
                 }
             })
             .connect(address)
             .awaitKt()
-
-        contextResult.complete(future.channel())
 
         future.channel().closeFuture().addListener {
             setState { StateConnectionLost(it.cause()) }
@@ -158,8 +145,6 @@ internal class NettyNetworkHandler(
             setState { StateConnecting(PacketDecodePipeline(this@NettyNetworkHandler.coroutineContext)) }
                 .resumeConnection()
         }
-
-        override fun toString(): String = "StateInitialized"
     }
 
     /**
@@ -176,44 +161,35 @@ internal class NettyNetworkHandler(
         private val connectResult = async {
             val connection = connection.await()
             context.ssoProcessor.login(this@NettyNetworkHandler)
-            setStateForJobCompletion { StateOK(connection) }
+            setState { StateOK(connection) }
         }.apply {
             invokeOnCompletion { error ->
-                if (error != null) setState {
-                    StateClosed(
-                        CancellationException("Connection failure.", error)
-                    )
-                } // logon failure closes the network handler.
+                if (error != null) setState { StateClosed(error) } // logon failure closes the network handler.
                 // and this error will also be thrown by `StateConnecting.resumeConnection`
             }
         }
 
         override suspend fun sendPacketImpl(packet: OutgoingPacket) {
-            connection.await() // split line number
-                .writeAndFlush(packet)
+            connection.await().writeAndFlush(packet)
         }
 
         override suspend fun resumeConnection0() {
             connectResult.await() // propagates exceptions
         }
-
-        override fun toString(): String = "StateConnecting"
     }
 
     private inner class StateOK(
-        private val connection: NettyChannel
+        private val connection: ChannelHandlerContext
     ) : NettyState(NetworkHandler.State.OK) {
         override suspend fun sendPacketImpl(packet: OutgoingPacket) {
             connection.writeAndFlush(packet)
         }
 
         override suspend fun resumeConnection0() {} // noop
-        override fun toString(): String = "StateOK"
     }
 
-    private inner class StateConnectionLost(
-        private val cause: Throwable
-    ) : NettyState(NetworkHandler.State.CONNECTION_LOST) {
+    private inner class StateConnectionLost(private val cause: Throwable) :
+        NettyState(NetworkHandler.State.CONNECTION_LOST) {
         override suspend fun sendPacketImpl(packet: OutgoingPacket) {
             throw IllegalStateException("Connection is lost so cannot send packet. Call resumeConnection first.", cause)
         }
@@ -226,7 +202,7 @@ internal class NettyNetworkHandler(
 
     private inner class StateClosed(
         val exception: Throwable?
-    ) : NettyState(NetworkHandler.State.CLOSED) {
+    ) : NettyState(NetworkHandler.State.OK) {
         init {
             closeSuper(exception)
         }
@@ -235,8 +211,6 @@ internal class NettyNetworkHandler(
         override suspend fun resumeConnection0() {
             exception?.let { throw it }
         } // noop
-
-        override fun toString(): String = "StateClosed"
     }
 
     override fun initialState(): BaseStateImpl = StateInitialized()

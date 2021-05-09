@@ -10,7 +10,10 @@
 package net.mamoe.mirai.internal.network.protocol.packet
 
 
-import kotlinx.io.core.*
+import kotlinx.io.core.BytePacketBuilder
+import kotlinx.io.core.ByteReadPacket
+import kotlinx.io.core.buildPacket
+import kotlinx.io.core.writeFully
 import net.mamoe.mirai.internal.QQAndroidBot
 import net.mamoe.mirai.internal.network.Packet
 import net.mamoe.mirai.internal.network.QQAndroidClient
@@ -35,9 +38,8 @@ internal open class OutgoingPacket constructor(
     name: String?,
     val commandName: String,
     val sequenceId: Int,
-    delegate: ByteReadPacket
+    val delegate: ByteReadPacket
 ) {
-    val delegate = delegate.readBytes()
     val name: String = name ?: commandName
 }
 
