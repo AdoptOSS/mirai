@@ -9,14 +9,7 @@
 
 package net.mamoe.mirai.internal.network.component
 
-/**
- * Should not be thrown normally.
- */
 internal data class NoSuchComponentException(
     val key: ComponentKey<*>,
     val storage: ComponentStorage
-) : NoSuchElementException() {
-    override val message: String by lazy {
-        "No such component '$key' in storage: \n$storage"
-    }
-}
+) : NoSuchElementException("No such component: $key")

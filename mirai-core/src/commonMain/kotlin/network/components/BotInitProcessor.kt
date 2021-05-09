@@ -16,7 +16,6 @@ import net.mamoe.mirai.internal.QQAndroidBot
 import net.mamoe.mirai.internal.network.Packet
 import net.mamoe.mirai.internal.network.component.ComponentKey
 import net.mamoe.mirai.internal.network.component.ComponentStorage
-import net.mamoe.mirai.internal.network.handler.NetworkHandler
 import net.mamoe.mirai.internal.network.handler.NetworkHandler.State
 import net.mamoe.mirai.internal.network.handler.state.JobAttachStateObserver
 import net.mamoe.mirai.internal.network.handler.state.StateObserver
@@ -29,13 +28,6 @@ import net.mamoe.mirai.internal.network.protocol.packet.sendAndExpect
 import net.mamoe.mirai.utils.MiraiLogger
 import net.mamoe.mirai.utils.info
 
-
-/**
- * Facade of [ContactUpdater], [OtherClientUpdater], [ConfigPushSyncer].
- * Handles initialization jobs after successful logon.
- *
- * Attached to handler state [NetworkHandler.State.LOADING] [as state observer][asObserver].
- */
 internal interface BotInitProcessor {
     suspend fun init()
 

@@ -105,7 +105,7 @@ internal class QQAndroidBot constructor(
             val components = this // avoid mistakes
             set(SsoProcessorContext, SsoProcessorContextImpl(bot))
             set(SsoProcessor, SsoProcessorImpl(get(SsoProcessorContext)))
-            set(HeartbeatProcessor, HeartbeatProcessorImpl())
+            set(HeartbeatProcessor, HeartbeatProcessor())
             set(KeyRefreshProcessor, KeyRefreshProcessorImpl(networkLogger))
             set(ConfigPushProcessor, ConfigPushProcessorImpl(networkLogger))
 

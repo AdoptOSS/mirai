@@ -28,27 +28,10 @@ internal data class ServerAddress(
     fun toSocketAddress(): InetSocketAddress = InetSocketAddress.createUnresolved(host, port)
 }
 
-/**
- * Self-refillable (similarly circular) queue of servers. Pop each time when trying to connect.
- *
- * [Preferred][getPreferred] prevails if present than [DEFAULT_SERVER_LIST].
- *
- * *+Implementation must be thread-safe**.
- */
 internal interface ServerList {
-    /**
-     * Set preferred so not using [DEFAULT_SERVER_LIST].
-     */
     fun setPreferred(list: Collection<ServerAddress>)
-
-    /**
-     * Might return [DEFAULT_SERVER_LIST] if not present.
-     */
     fun getPreferred(): Set<ServerAddress>
 
-    /**
-     * Refill the queue. Mostly do not call this function.
-     */
     fun refresh()
 
     /**
@@ -77,6 +60,9 @@ internal interface ServerList {
     }
 }
 
+/**
+ * Queue of servers. Pop each time when trying to connect.
+ */
 internal class ServerListImpl(
     initial: Collection<ServerAddress> = emptyList()
 ) : ServerList {

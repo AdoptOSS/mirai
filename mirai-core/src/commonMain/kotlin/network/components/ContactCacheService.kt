@@ -22,16 +22,13 @@ import net.mamoe.mirai.utils.loadNotBlankAs
 import net.mamoe.mirai.utils.runBIO
 
 /**
- * Strategy of caching contacts. Used by [ContactUpdater].
+ * Maintains cache. Used by [ContactUpdater].
  */
 internal interface ContactCacheService {
-    val friendListCache: FriendListCache? // from old code
-    val groupMemberListCaches: GroupMemberListCaches? // from old code
+    val friendListCache: FriendListCache?
+    val groupMemberListCaches: GroupMemberListCaches?
 
-    /**
-     * Implementation does not need to be thread-safe.
-     */
-    fun saveFriendCache() // from old code
+    fun saveFriendCache()
 
     companion object : ComponentKey<ContactCacheService>
 }
