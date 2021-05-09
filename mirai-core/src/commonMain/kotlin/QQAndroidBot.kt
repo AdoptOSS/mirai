@@ -81,7 +81,7 @@ internal class QQAndroidBot constructor(
 
     // TODO: 2021/4/14         bdhSyncer.loadFromCache()  when login
 
-    internal val components: ConcurrentComponentStorage by lazy {
+    private val components: ConcurrentComponentStorage by lazy {
         ConcurrentComponentStorage().apply {
             set(
                 SsoProcessor,
