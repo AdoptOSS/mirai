@@ -96,7 +96,6 @@ kotlin {
                     implementation(kotlin("test-junit5", Versions.kotlinCompiler))
                     implementation(kotlin("test-annotations-common"))
                     implementation(kotlin("test-common"))
-                    implementation("org.bouncycastle:bcprov-jdk15on:1.64")
                 }
             }
         }
