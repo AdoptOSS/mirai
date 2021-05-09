@@ -70,8 +70,7 @@ internal class BotInitProcessorImpl(
 
         // do them parallel.
         supervisorScope {
-            launch { syncMessageSvc() }
-            launch { context[BdhSessionSyncer].loadFromCache() }
+//            launch { syncMessageSvc() }
             launch { context[OtherClientUpdater].update() }
             launch { context[ContactUpdater].loadAll(registerResp.origin) }
         }

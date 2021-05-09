@@ -20,9 +20,9 @@ import net.mamoe.mirai.internal.contact.replaceMagicCodes
 import net.mamoe.mirai.internal.network.Packet
 import net.mamoe.mirai.internal.network.ParseErrorPacket
 import net.mamoe.mirai.internal.network.component.ComponentKey
-import net.mamoe.mirai.internal.network.protocol.packet.*
+import net.mamoe.mirai.internal.network.component.ComponentStorage
+import net.mamoe.mirai.internal.network.protocol.packet.IncomingPacket
 import net.mamoe.mirai.utils.MiraiLogger
-import net.mamoe.mirai.utils.cast
 import net.mamoe.mirai.utils.verbose
 
 internal interface PacketHandler {
@@ -32,10 +32,11 @@ internal interface PacketHandler {
 }
 
 internal class PacketHandlerChain(
-    private val instances: Collection<PacketHandler>
+    private val instances: Collection<PacketHandler>,
+    primaryConstructorMark: Any?
 ) : PacketHandler {
-    constructor(vararg instances: PacketHandler?) : this(instances.filterNotNull())
-    constructor(instances: Iterable<PacketHandler?>) : this(instances.filterNotNull())
+    constructor(vararg instances: PacketHandler?) : this(instances.filterNotNull(), null)
+    constructor(instances: Iterable<PacketHandler?>) : this(instances.filterNotNull(), null)
 
     override suspend fun handlePacket(incomingPacket: IncomingPacket) {
         for (instance in instances) {
@@ -54,7 +55,8 @@ internal data class ExceptionInPacketHandlerException(
 ) : IllegalStateException("Exception in PacketHandler '$packetHandler'.")
 
 internal class LoggingPacketHandler(
-    private val bot: QQAndroidBot,
+    val bot: QQAndroidBot,
+    val context: ComponentStorage,
     private val logger: MiraiLogger,
 ) : PacketHandler {
     override suspend fun handlePacket(incomingPacket: IncomingPacket) {
@@ -64,10 +66,10 @@ internal class LoggingPacketHandler(
             packet is ParseErrorPacket -> {
                 packet.direction.getLogger(bot).error(packet.error)
             }
-            packet is MessageEvent -> packet.logMessageReceived()
             packet is Packet.NoLog -> {
                 // nothing to do
             }
+            packet is MessageEvent -> packet.logMessageReceived()
             packet is Event && packet !is Packet.NoEventLog -> bot.logger.verbose {
                 "Event: $packet".replaceMagicCodes()
             }
@@ -79,6 +81,8 @@ internal class LoggingPacketHandler(
 }
 
 internal class EventBroadcasterPacketHandler(
+    val bot: QQAndroidBot,
+    val context: ComponentStorage,
     private val logger: MiraiLogger,
 ) : PacketHandler {
 
@@ -106,26 +110,4 @@ internal class EventBroadcasterPacketHandler(
     }
 
     override fun toString(): String = "LoggingPacketHandler"
-}
-
-internal class CallPacketFactoryPacketHandler(
-    private val bot: QQAndroidBot,
-) : PacketHandler {
-
-    override suspend fun handlePacket(incomingPacket: IncomingPacket) {
-        val factory = KnownPacketFactories.findPacketFactory(incomingPacket.commandName) ?: return
-        factory.cast<PacketFactory<Packet?>>().run {
-            when (this) {
-                is IncomingPacketFactory -> {
-                    val r = bot.handle(incomingPacket.data, incomingPacket.sequenceId)
-                    if (r != null) {
-                        bot.network.sendWithoutExpect(r)
-                    }
-                }
-                is OutgoingPacketFactory -> bot.handle(incomingPacket.data)
-            }
-        }
-    }
-
-    override fun toString(): String = "CallPacketFactoryPacketHandler"
 }

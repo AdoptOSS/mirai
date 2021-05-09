@@ -21,7 +21,6 @@ import kotlinx.serialization.json.*
 import net.mamoe.mirai.*
 import net.mamoe.mirai.contact.*
 import net.mamoe.mirai.data.*
-import net.mamoe.mirai.event.broadcast
 import net.mamoe.mirai.event.events.BotInvitedJoinGroupRequestEvent
 import net.mamoe.mirai.event.events.FriendAddEvent
 import net.mamoe.mirai.event.events.MemberJoinRequestEvent
@@ -44,6 +43,7 @@ import net.mamoe.mirai.internal.network.protocol.packet.login.StatSvc
 import net.mamoe.mirai.internal.network.protocol.packet.sendAndExpect
 import net.mamoe.mirai.internal.network.protocol.packet.summarycard.SummaryCard
 import net.mamoe.mirai.internal.utils.MiraiProtocolInternal
+import net.mamoe.mirai.internal.utils.broadcastWithBot
 import net.mamoe.mirai.internal.utils.crypto.TEA
 import net.mamoe.mirai.internal.utils.io.serialization.loadAs
 import net.mamoe.mirai.internal.utils.io.serialization.toByteArray
@@ -156,7 +156,7 @@ internal open class MiraiImpl : IMirai, LowLevelApiAccessor {
         )
 
         event.bot.getFriend(event.fromId)?.let { friend ->
-            FriendAddEvent(friend).broadcast()
+            FriendAddEvent(friend).broadcastWithBot(event.bot)
         }
     }
 

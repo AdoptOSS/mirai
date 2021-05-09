@@ -30,7 +30,10 @@ import net.mamoe.mirai.internal.network.handler.NetworkHandlerSupport
 import net.mamoe.mirai.internal.network.handler.logger
 import net.mamoe.mirai.internal.network.handler.state.StateObserver
 import net.mamoe.mirai.internal.network.protocol.packet.OutgoingPacket
-import net.mamoe.mirai.utils.*
+import net.mamoe.mirai.utils.ExceptionCollector
+import net.mamoe.mirai.utils.childScope
+import net.mamoe.mirai.utils.debug
+import net.mamoe.mirai.utils.systemProp
 import java.net.SocketAddress
 import kotlin.coroutines.CoroutineContext
 import io.netty.channel.Channel as NettyChannel
@@ -215,9 +218,7 @@ internal open class NettyNetworkHandler(
             context[SsoProcessor].login(this@NettyNetworkHandler)
         }.apply {
             invokeOnCompletion { error ->
-                if (error == null) {
-                    this@NettyNetworkHandler.launch { resumeConnection() }
-                } else {
+                if (error != null) {
                     if (error is StateSwitchingException && error.new is StateConnecting) {
                         return@invokeOnCompletion // already been switching to CONNECTING
                     }
@@ -302,7 +303,7 @@ internal open class NettyNetworkHandler(
         }.apply {
             invokeOnCompletion { e ->
                 if (e != null) {
-                    logger.info { "Heartbeat failed: $e." }
+                    logger.debug { "x" }
                 }
             }
         }

@@ -38,6 +38,7 @@ import net.mamoe.mirai.internal.network.protocol.packet.chat.voice.voiceCodec
 import net.mamoe.mirai.internal.network.protocol.packet.list.ProfileService
 import net.mamoe.mirai.internal.utils.GroupPkgMsgParsingCache
 import net.mamoe.mirai.internal.utils.RemoteFileImpl
+import net.mamoe.mirai.internal.utils.broadcastWithBot
 import net.mamoe.mirai.internal.utils.io.serialization.toByteArray
 import net.mamoe.mirai.message.MessageReceipt
 import net.mamoe.mirai.message.data.*
@@ -110,7 +111,7 @@ internal class GroupImpl(
                 }
             }
         }
-        BotLeaveEvent.Active(this).broadcast()
+        BotLeaveEvent.Active(this).broadcastWithBot(bot)
         return true
     }
 
