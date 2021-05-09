@@ -97,52 +97,65 @@ internal object GlobalEventListeners {
 }
 
 
-internal suspend fun <E : AbstractEvent> callAndRemoveIfRequired(event: E) {
-    for (p in EventPriority.prioritiesExcludedMonitor) {
-        val container = GlobalEventListeners[p]
-        for (registry in container) {
-            if (event.isIntercepted) return
-            if (!registry.type.isInstance(event)) continue
-            val listener = registry.listener
-            process(container, registry, listener, event)
-        }
-    }
-
-    if (event.isIntercepted) return
-    val container = GlobalEventListeners[EventPriority.MONITOR]
-    when (container.size) {
-        0 -> return
-        1 -> {
-            val registry = container.firstOrNull() ?: return
-            if (!registry.type.isInstance(event)) return
-            process(container, registry, registry.listener, event)
-        }
-        else -> supervisorScope {
-            for (registry in GlobalEventListeners[EventPriority.MONITOR]) {
-                if (!registry.type.isInstance(event)) continue
-                launch { process(container, registry, registry.listener, event) }
-            }
-        }
-    }
+// inline: NO extra Continuation
+@Suppress("UNCHECKED_CAST")
+internal suspend inline fun AbstractEvent.broadcastInternal() {
+    callAndRemoveIfRequired(this@broadcastInternal)
 }
 
-private suspend fun <E : AbstractEvent> process(
-    container: ConcurrentLinkedQueue<ListenerRegistry>,
-    registry: ListenerRegistry,
-    listener: Listener<Event>,
-    event: E,
+internal inline fun <E, T : Iterable<E>> T.forEach0(block: T.(E) -> Unit) {
+    forEach { block(it) }
+}
+
+@Suppress("DuplicatedCode")
+internal suspend inline fun <E : AbstractEvent> callAndRemoveIfRequired(
+    event: E
 ) {
-    when (listener.concurrencyKind) {
-        ConcurrencyKind.LOCKED -> {
-            (listener as Handler).lock!!.withLock {
-                if (listener.onEvent(event) == ListeningStatus.STOPPED) {
-                    container.remove(registry)
+    for (p in EventPriority.prioritiesExcludedMonitor) {
+        GlobalEventListeners[p].forEach0 { registeredRegistry ->
+            if (event.isIntercepted) {
+                return
+            }
+            if (!registeredRegistry.type.isInstance(event)) return@forEach0
+            val listener = registeredRegistry.listener
+            when (listener.concurrencyKind) {
+                ConcurrencyKind.LOCKED -> {
+                    (listener as Handler).lock!!.withLock {
+                        if (listener.onEvent(event) == ListeningStatus.STOPPED) {
+                            remove(registeredRegistry)
+                        }
+                    }
+                }
+                ConcurrencyKind.CONCURRENT -> {
+                    if (listener.onEvent(event) == ListeningStatus.STOPPED) {
+                        remove(registeredRegistry)
+                    }
                 }
             }
         }
-        ConcurrencyKind.CONCURRENT -> {
-            if (listener.onEvent(event) == ListeningStatus.STOPPED) {
-                container.remove(registry)
+    }
+    coroutineScope {
+        GlobalEventListeners[EventPriority.MONITOR].forEach0 { registeredRegistry ->
+            if (event.isIntercepted) {
+                return@coroutineScope
+            }
+            if (!registeredRegistry.type.isInstance(event)) return@forEach0
+            val listener = registeredRegistry.listener
+            launch {
+                when (listener.concurrencyKind) {
+                    ConcurrencyKind.LOCKED -> {
+                        (listener as Handler).lock!!.withLock {
+                            if (listener.onEvent(event) == ListeningStatus.STOPPED) {
+                                remove(registeredRegistry)
+                            }
+                        }
+                    }
+                    ConcurrencyKind.CONCURRENT -> {
+                        if (listener.onEvent(event) == ListeningStatus.STOPPED) {
+                            remove(registeredRegistry)
+                        }
+                    }
+                }
             }
         }
     }

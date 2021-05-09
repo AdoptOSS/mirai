@@ -9,7 +9,6 @@
 
 package net.mamoe.mirai.internal.network.handler
 
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.selects.SelectClause1
 import net.mamoe.mirai.Bot
 import net.mamoe.mirai.internal.network.Packet
@@ -31,7 +30,7 @@ import net.mamoe.mirai.utils.MiraiLogger
  * @see NetworkHandlerSupport
  * @see NetworkHandlerFactory
  */
-internal interface NetworkHandler : CoroutineScope {
+internal interface NetworkHandler {
     val context: NetworkHandlerContext
 
     fun isOk() = state == State.OK

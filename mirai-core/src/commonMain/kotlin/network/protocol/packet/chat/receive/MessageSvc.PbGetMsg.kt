@@ -18,7 +18,6 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
 import kotlinx.io.core.*
-import net.mamoe.mirai.Bot
 import net.mamoe.mirai.Mirai
 import net.mamoe.mirai.contact.Group
 import net.mamoe.mirai.contact.MemberPermission
@@ -56,10 +55,7 @@ import net.mamoe.mirai.message.data.MessageSourceKind.STRANGER
 import net.mamoe.mirai.message.data.MessageSourceKind.TEMP
 import net.mamoe.mirai.message.data.PlainText
 import net.mamoe.mirai.message.data.buildMessageChain
-import net.mamoe.mirai.utils.cast
-import net.mamoe.mirai.utils.debug
-import net.mamoe.mirai.utils.read
-import net.mamoe.mirai.utils.toUHexString
+import net.mamoe.mirai.utils.*
 import kotlin.random.Random
 
 
@@ -97,13 +93,12 @@ internal object MessageSvcPbGetMsg : OutgoingPacketFactory<MessageSvcPbGetMsg.Re
         )
     }
 
-    open class GetMsgSuccess(delegate: List<Packet>, syncCookie: ByteArray?, bot: QQAndroidBot) : Response(
+    open class GetMsgSuccess(delegate: List<Packet>, syncCookie: ByteArray?, val bot: QQAndroidBot) : Response(
         MsgSvc.SyncFlag.STOP, delegate,
-        syncCookie,
-        bot
+        syncCookie
     ), Event,
         Packet.NoLog {
-        override fun toString(): String = "MessageSvcPbGetMsg.GetMsgSuccess"
+        override fun toString(): String = "MessageSvcPbGetMsg.GetMsgSuccess(messages=<Iterable>))"
     }
 
     /**
@@ -112,16 +107,15 @@ internal object MessageSvcPbGetMsg : OutgoingPacketFactory<MessageSvcPbGetMsg.Re
     open class Response(
         internal val syncFlagFromServer: MsgSvc.SyncFlag,
         delegate: List<Packet>,
-        val syncCookie: ByteArray?, override val bot: Bot
+        val syncCookie: ByteArray?
     ) :
         AbstractEvent(),
         MultiPacket<Packet>,
         Iterable<Packet> by (delegate),
-        Packet.NoLog,
-        BotEvent {
+        Packet.NoLog {
 
         override fun toString(): String =
-            "MessageSvcPbGetMsg.Response(flag=$syncFlagFromServer)"
+            "MessageSvcPbGetMsg.Response(syncFlagFromServer=$syncFlagFromServer, messages=<Iterable>))"
     }
 
     class EmptyResponse(
@@ -134,12 +128,9 @@ internal object MessageSvcPbGetMsg : OutgoingPacketFactory<MessageSvcPbGetMsg.Re
         val resp = readProtoBuf(MsgSvc.PbGetMsgResp.serializer())
 
         if (resp.result != 0) {
-            // this is normally recoverable, no need to log
-
-
-//            bot.network.logger
-//                .warning { "MessageSvcPushNotify: result != 0, result = ${resp.result}, errorMsg=${resp.errmsg}" }
-            bot.network.launch(CoroutineName("MessageSvcPushNotify.retry")) {
+            bot.network.logger
+                .warning { "MessageSvcPushNotify: result != 0, result = ${resp.result}, errorMsg=${resp.errmsg}" }
+            bot.launch(CoroutineName("MessageSvcPushNotify.retry")) {
                 delay(500 + Random.nextLong(0, 1000))
                 bot.network.run {
                     MessageSvcPbGetMsg(bot.client, syncCookie = null).sendWithoutExpect()
@@ -197,7 +188,7 @@ internal object MessageSvcPbGetMsg : OutgoingPacketFactory<MessageSvcPbGetMsg.Re
         if (resp.syncFlag == MsgSvc.SyncFlag.STOP) {
             return GetMsgSuccess(list, resp.syncCookie, bot)
         }
-        return Response(resp.syncFlag, list, resp.syncCookie, bot)
+        return Response(resp.syncFlag, list, resp.syncCookie)
     }
 
     override suspend fun QQAndroidBot.handle(packet: Response) {
