@@ -19,11 +19,9 @@ import net.mamoe.mirai.internal.network.handler.context.NetworkHandlerContext
  */
 internal class FactoryKeepAliveNetworkHandlerSelector<H : NetworkHandler>(
     private val factory: NetworkHandlerFactory<H>,
+    private val serverList: ServerList,
     private val context: NetworkHandlerContext,
 ) : AbstractKeepAliveNetworkHandlerSelector<H>() {
     override fun createInstance(): H =
-        factory.create(
-            context,
-            context[ServerList].pollCurrent()?.toSocketAddress() ?: throw NoServerAvailableException()
-        )
+        factory.create(context, serverList.pollCurrent()?.toSocketAddress() ?: throw NoServerAvailableException())
 }

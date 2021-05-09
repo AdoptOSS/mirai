@@ -73,6 +73,7 @@ internal class QQAndroidBot constructor(
 ) : AbstractBot(configuration, account.id) {
     override val bot: QQAndroidBot get() = this
 
+    val bdhSyncer: BdhSessionSyncer by lazy { BdhSessionSyncerImpl(configuration, serverListNew, network.logger) }
     internal var firstLoginSucceed: Boolean = false
 
     ///////////////////////////////////////////////////////////////////////////
@@ -91,13 +92,6 @@ internal class QQAndroidBot constructor(
             set(StateObserver, debugConfiguration.stateObserver)
             set(ContactCacheService, ContactCacheServiceImpl(bot))
             set(ContactUpdater, ContactUpdaterImpl(bot, this))
-            set(BdhSessionSyncer, BdhSessionSyncerImpl(configuration, network.logger, this))
-            set(ServerList, ServerListImpl())
-
-
-            // TODO: 2021/4/16 load server list from cache (add a provider)
-            // bot.bdhSyncer.loadServerListFromCache()
-
         }
     }
 
@@ -115,7 +109,7 @@ internal class QQAndroidBot constructor(
         )
         return SelectorNetworkHandler(
             context,
-            FactoryKeepAliveNetworkHandlerSelector(NettyNetworkHandlerFactory, context)
+            FactoryKeepAliveNetworkHandlerSelector(NettyNetworkHandlerFactory, serverListNew, context)
         ) // We can move the factory to configuration but this is not necessary for now.
     }
 
