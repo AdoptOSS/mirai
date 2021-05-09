@@ -19,8 +19,7 @@ import net.mamoe.mirai.event.events.BotOfflineEvent
 import net.mamoe.mirai.internal.QQAndroidBot
 import net.mamoe.mirai.internal.message.contextualBugReportException
 import net.mamoe.mirai.internal.network.Packet
-import net.mamoe.mirai.internal.network.handler.components.ServerAddress
-import net.mamoe.mirai.internal.network.handler.context.BdhSession
+import net.mamoe.mirai.internal.network.handler.BdhSession
 import net.mamoe.mirai.internal.network.handler.logger
 import net.mamoe.mirai.internal.network.networkType
 import net.mamoe.mirai.internal.network.protocol.data.jce.FileStoragePushFSSvcList
@@ -149,7 +148,10 @@ internal class ConfigPushSvc {
                 bot.network.logger.info { "Server list: ${pushServerList.joinToString()}." }
 
                 if (pushServerList.isNotEmpty()) {
-                    bot.serverListNew.setPreferred(pushServerList.shuffled().map { ServerAddress(it.host, it.port) })
+                    bot.serverList.clear()
+                    pushServerList.shuffled().forEach {
+                        bot.serverList.add(it.host to it.port)
+                    }
                 }
                 bot.bdhSyncer.saveToCache()
                 bot.bdhSyncer.saveServerListToCache()

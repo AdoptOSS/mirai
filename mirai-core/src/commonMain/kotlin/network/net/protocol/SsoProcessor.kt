@@ -7,15 +7,12 @@
  *  https://github.com/mamoe/mirai/blob/master/LICENSE
  */
 
-package net.mamoe.mirai.internal.network.handler.components
+package net.mamoe.mirai.internal.network.net.protocol
 
+import net.mamoe.mirai.internal.BotAccount
 import net.mamoe.mirai.internal.QQAndroidBot
-import net.mamoe.mirai.internal.network.Packet
-import net.mamoe.mirai.internal.network.QQAndroidClient
+import net.mamoe.mirai.internal.network.*
 import net.mamoe.mirai.internal.network.handler.NetworkHandler
-import net.mamoe.mirai.internal.network.handler.context.AccountSecretsImpl
-import net.mamoe.mirai.internal.network.handler.context.SsoProcessorContext
-import net.mamoe.mirai.internal.network.handler.context.SsoSession
 import net.mamoe.mirai.internal.network.handler.impl.netty.NettyNetworkHandler
 import net.mamoe.mirai.internal.network.protocol.packet.OutgoingPacketWithRespType
 import net.mamoe.mirai.internal.network.protocol.packet.login.WtLogin.Login.LoginPacketResponse
@@ -26,10 +23,34 @@ import net.mamoe.mirai.internal.network.protocol.packet.login.wtlogin.WtLogin20
 import net.mamoe.mirai.internal.network.protocol.packet.login.wtlogin.WtLogin9
 import net.mamoe.mirai.internal.network.protocol.packet.sendAndExpect
 import net.mamoe.mirai.network.*
+import net.mamoe.mirai.utils.*
 import net.mamoe.mirai.utils.BotConfiguration.MiraiProtocol
-import net.mamoe.mirai.utils.LoginSolver
-import net.mamoe.mirai.utils.info
-import net.mamoe.mirai.utils.withExceptionCollector
+
+/**
+ * Provides the information needed by the [SsoProcessor].
+ */
+internal interface SsoProcessorContext {
+    val bot: QQAndroidBot
+
+    val account: BotAccount
+    val device: DeviceInfo
+
+    val protocol: MiraiProtocol
+
+    val accountSecretsManager: AccountSecretsManager
+
+    val configuration: BotConfiguration
+}
+
+internal class SsoProcessorContextImpl(
+    override val bot: QQAndroidBot
+) : SsoProcessorContext {
+    override val account: BotAccount get() = bot.account
+    override val device: DeviceInfo = configuration.deviceInfo?.invoke(bot) ?: DeviceInfo.random()
+    override val protocol: MiraiProtocol get() = configuration.protocol
+    override val accountSecretsManager: AccountSecretsManager get() = configuration.createAccountsSecretsManager(bot.logger)
+    override val configuration: BotConfiguration get() = bot.configuration
+}
 
 /**
  * Strategy that performs the process of single sing-on (SSO). (login)
@@ -39,7 +60,7 @@ import net.mamoe.mirai.utils.withExceptionCollector
  * Used by [NettyNetworkHandler.StateConnecting].
  */
 internal class SsoProcessor(
-    internal val ssoContext: SsoProcessorContext,
+    private val ssoContext: SsoProcessorContext,
 ) {
     @Volatile
     internal var client = createClient(ssoContext.bot)
@@ -50,7 +71,7 @@ internal class SsoProcessor(
      * Do login. Throws [LoginFailedException] if failed
      */
     @Throws(LoginFailedException::class)
-    suspend fun login(handler: NetworkHandler) = withExceptionCollector {
+    suspend fun login(handler: NetworkHandler) = withExceptionCollector<Unit> {
         if (client.wLoginSigInfoInitialized) {
             kotlin.runCatching {
                 FastLoginImpl(handler).doLogin()
@@ -62,7 +83,6 @@ internal class SsoProcessor(
             client = createClient(ssoContext.bot)
             SlowLoginImpl(handler).doLogin()
         }
-        ssoContext.accountSecretsManager.saveSecrets(ssoContext.account, AccountSecretsImpl(client))
     }
 
     private fun createClient(bot: QQAndroidBot): QQAndroidClient {

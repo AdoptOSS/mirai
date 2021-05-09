@@ -7,13 +7,11 @@
  *  https://github.com/mamoe/mirai/blob/master/LICENSE
  */
 
-package net.mamoe.mirai.internal.network.handler.components
+package net.mamoe.mirai.internal.network.handler
 
-import kotlinx.serialization.Serializable
 import java.net.InetSocketAddress
 import java.util.*
 
-@Serializable
 internal data class ServerAddress(
     val host: String,
     val port: Int
@@ -43,8 +41,6 @@ internal class ServerList(
         require(list.isNotEmpty()) { "list cannot be empty." }
         preferred = list.toSet()
     }
-
-    fun getPreferred() = preferred
 
     init {
         refresh()

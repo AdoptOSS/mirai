@@ -7,14 +7,11 @@
  *  https://github.com/mamoe/mirai/blob/master/LICENSE
  */
 
-package net.mamoe.mirai.internal.network.handler.context
+package net.mamoe.mirai.internal.network
 
 import kotlinx.io.core.toByteArray
 import kotlinx.serialization.Serializable
 import net.mamoe.mirai.internal.BotAccount
-import net.mamoe.mirai.internal.network.LoginExtraData
-import net.mamoe.mirai.internal.network.WLoginSigInfo
-import net.mamoe.mirai.internal.network.getRandomByteArray
 import net.mamoe.mirai.internal.network.protocol.packet.login.wtlogin.get_mpasswd
 import net.mamoe.mirai.internal.utils.io.ProtoBuf
 import net.mamoe.mirai.utils.DeviceInfo
