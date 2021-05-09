@@ -13,7 +13,6 @@ import kotlinx.io.core.ByteReadPacket
 import net.mamoe.mirai.event.Event
 import net.mamoe.mirai.internal.QQAndroidBot
 import net.mamoe.mirai.internal.network.Packet
-import net.mamoe.mirai.internal.network.net.protocol.PacketCodec
 import net.mamoe.mirai.internal.network.protocol.packet.chat.*
 import net.mamoe.mirai.internal.network.protocol.packet.chat.image.ImgStore
 import net.mamoe.mirai.internal.network.protocol.packet.chat.image.LongConn
@@ -27,7 +26,9 @@ import net.mamoe.mirai.internal.network.protocol.packet.login.Heartbeat
 import net.mamoe.mirai.internal.network.protocol.packet.login.StatSvc
 import net.mamoe.mirai.internal.network.protocol.packet.login.WtLogin
 import net.mamoe.mirai.internal.network.protocol.packet.summarycard.SummaryCard
+import net.mamoe.mirai.utils.MiraiLogger
 import net.mamoe.mirai.utils.MiraiLoggerWithSwitch
+import net.mamoe.mirai.utils.withSwitch
 
 internal sealed class PacketFactory<TPacket : Packet?> {
     /**
@@ -111,18 +112,11 @@ internal suspend inline fun <P : Packet?> IncomingPacketFactory<P>.decode(
  * 数据包相关的调试输出.
  * 它默认是关闭的.
  */
-@Deprecated(
-    "Kept for binary compatibility.",
-    ReplaceWith("PacketCodec.PacketLogger", "net.mamoe.mirai.internal.network.net.protocol.PacketCodec"),
-    level = DeprecationLevel.ERROR,
-)
 @PublishedApi
-internal val PacketLogger: MiraiLoggerWithSwitch
-    get() = PacketCodec.PacketLogger
+internal val PacketLogger: MiraiLoggerWithSwitch by lazy {
+    MiraiLogger.create("Packet").withSwitch(false)
+}
 
-/**
- * Registered factories.
- */
 internal object KnownPacketFactories {
     object OutgoingFactories : List<OutgoingPacketFactory<*>> by mutableListOf(
         WtLogin.Login,
