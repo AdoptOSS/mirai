@@ -33,6 +33,7 @@ import net.mamoe.mirai.internal.contact.toMiraiFriendInfo
 import net.mamoe.mirai.internal.network.Packet
 import net.mamoe.mirai.internal.network.component.ComponentKey
 import net.mamoe.mirai.internal.network.component.ComponentStorage
+import net.mamoe.mirai.internal.network.handler.logger
 import net.mamoe.mirai.internal.network.isValid
 import net.mamoe.mirai.internal.network.protocol.data.jce.StTroopNum
 import net.mamoe.mirai.internal.network.protocol.data.jce.SvcRespRegister
@@ -159,7 +160,7 @@ internal class ContactUpdaterImpl(
 
         val list = if (friendListCache?.isValid(registerResp) == true) {
             val list = friendListCache.list
-            logger.info { "Loaded ${list.size} friends from local cache." }
+            bot.network.logger.info { "Loaded ${list.size} friends from local cache." }
 
             // For sync bot nick
             FriendList.GetFriendGroupList(
@@ -198,7 +199,7 @@ internal class ContactUpdaterImpl(
         val members = if (cache != null) {
             if (cache.isValid(stTroopNum)) {
                 cache.list.asSequence().also {
-                    logger.info { "Loaded ${cache.list.size} members from local cache for group $groupName (${groupCode})" }
+                    bot.network.logger.info { "Loaded ${cache.list.size} members from local cache for group $groupName (${groupCode})" }
                 }
             } else refreshGroupMemberList().also { sequence ->
                 cache.troopMemberNumSeq = dwMemberNumSeq ?: 0

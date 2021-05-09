@@ -89,8 +89,8 @@ public sealed class BotOfflineEvent : BotEvent, AbstractEvent() {
      */
     @MiraiInternalApi
     public data class RequireReconnect @MiraiInternalApi public constructor(
-        public override val bot: Bot, override val cause: Throwable?,
-    ) : BotOfflineEvent(), Packet, BotPassiveEvent, CauseAware {
+        public override val bot: Bot
+    ) : BotOfflineEvent(), Packet, BotPassiveEvent {
         override var reconnect: Boolean = true
     }
 

@@ -163,8 +163,7 @@ internal class ConfigPushSvc {
                     bot.logger.info { "Server request to change server." }
                     bot.launch {
                         delay(1000)
-                        BotOfflineEvent.RequireReconnect(bot, IllegalStateException("Server request to change server."))
-                            .broadcast()
+                        BotOfflineEvent.RequireReconnect(bot).broadcast()
                     }
                 }
             }

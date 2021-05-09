@@ -271,7 +271,11 @@ internal open class NettyNetworkHandler(
         }
 
         private val configPush = this@NettyNetworkHandler.launch(CoroutineName("ConfigPush sync")) {
-            context[ConfigPushProcessor].syncConfigPush(this@NettyNetworkHandler)
+            try {
+                context[ConfigPushProcessor].syncConfigPush(this@NettyNetworkHandler)
+            } catch (e: ConfigPushProcessor.RequireReconnectException) {
+                setState { StateConnecting(ExceptionCollector(e), false) }
+            }
         }
 
         override suspend fun resumeConnection0() {
@@ -314,6 +318,7 @@ internal open class NettyNetworkHandler(
 
                     try {
                         action()
+                        heartbeatProcessor.doAliveHeartbeatNow(this@NettyNetworkHandler)
                     } catch (e: Throwable) {
                         setState {
                             StateConnecting(ExceptionCollector(IllegalStateException("Exception in $name job", e)))
@@ -322,15 +327,16 @@ internal open class NettyNetworkHandler(
                 }
             }.apply {
                 invokeOnCompletion { e ->
-                    if (e is CancellationException) return@invokeOnCompletion // normally closed
-                    if (e != null) logger.info { "$name failed: $e." }
+                    if (e != null) {
+                        logger.info { "$name failed: $e." }
+                    }
                 }
             }
         }
 
         private val heartbeat = launchHeartbeatJob(
             "AliveHeartbeat",
-            { context[SsoProcessorContext].configuration.heartbeatPeriodMillis },
+            { context[SsoProcessorContext].configuration.heartbeatTimeoutMillis },
             { heartbeatProcessor.doAliveHeartbeatNow(this@NettyNetworkHandler) }
         )
 
@@ -354,7 +360,6 @@ internal open class NettyNetworkHandler(
         override suspend fun resumeConnection0() {
             joinCompleted(coroutineContext.job)
             joinCompleted(heartbeat)
-            joinCompleted(statHeartbeat)
             joinCompleted(configPush)
             joinCompleted(keyRefresh)
         } // noop

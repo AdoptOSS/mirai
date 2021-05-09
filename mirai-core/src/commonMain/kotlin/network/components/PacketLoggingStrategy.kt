@@ -14,7 +14,6 @@ import net.mamoe.mirai.event.events.MessageEvent
 import net.mamoe.mirai.internal.AbstractBot
 import net.mamoe.mirai.internal.contact.logMessageReceived
 import net.mamoe.mirai.internal.contact.replaceMagicCodes
-import net.mamoe.mirai.internal.network.MultiPacket
 import net.mamoe.mirai.internal.network.Packet
 import net.mamoe.mirai.internal.network.ParseErrorPacket
 import net.mamoe.mirai.internal.network.component.ComponentKey
@@ -44,27 +43,12 @@ internal class PacketLoggingStrategyImpl(
     }
 
     override fun logReceived(logger: MiraiLogger, incomingPacket: IncomingPacket) {
-        incomingPacket.exception?.let {
-            logger.error(it)
-            return
-        }
         val packet = incomingPacket.data ?: return
         if (!bot.logger.isEnabled && !logger.isEnabled) return
-        if (packet is ParseErrorPacket) {
-            packet.direction.getLogger(bot).error(packet.error)
-        }
-        if (incomingPacket.data is MultiPacket<*>) {
-            for (d in incomingPacket.data) {
-                logReceivedImpl(d, incomingPacket, logger)
-            }
-        }
-        if (incomingPacket.commandName !in blacklist) {
-            logReceivedImpl(packet, incomingPacket, logger)
-        }
-    }
-
-    private fun logReceivedImpl(packet: Packet, incomingPacket: IncomingPacket, logger: MiraiLogger) {
         when {
+            packet is ParseErrorPacket -> {
+                packet.direction.getLogger(bot).error(packet.error)
+            }
             packet is MessageEvent -> packet.logMessageReceived()
             packet is Packet.NoLog -> {
                 // nothing to do
@@ -83,16 +67,12 @@ internal class PacketLoggingStrategyImpl(
     }
 
     companion object {
-        val DEFAULT_BLACKLIST: Set<String>
-            get() {
-                if (systemProp("mirai.debug.network.show.verbose.packets", false)) return emptySet()
-                return setOf(
-                    "MessageSvc.PbDeleteMsg",
-                    "MessageSvc.PbGetMsg", // they are too verbose.
-                    "OnlinePush.RespPush",
-                    "Heartbeat.Alive",
-                )
-            }
+        @JvmField
+        val DEFAULT_BLACKLIST = setOf(
+            "MessageSvc.PbDeleteMsg",
+            "MessageSvc.PbGetMsg", // they are too verbose.
+            "OnlinePush.RespPush"
+        )
 
         @JvmField
         var SHOW_PACKET_DETAILS = systemProp("mirai.debug.network.show.packet.details", false)

@@ -40,7 +40,6 @@ import net.mamoe.mirai.internal.network.impl.netty.NettyNetworkHandlerFactory
 import net.mamoe.mirai.internal.network.impl.netty.asCoroutineExceptionHandler
 import net.mamoe.mirai.internal.network.protocol.packet.OutgoingPacket
 import net.mamoe.mirai.internal.network.protocol.packet.OutgoingPacketWithRespType
-import net.mamoe.mirai.internal.utils.subLogger
 import net.mamoe.mirai.utils.BotConfiguration
 import net.mamoe.mirai.utils.MiraiLogger
 import net.mamoe.mirai.utils.systemProp
@@ -144,7 +143,7 @@ internal open class QQAndroidBot constructor(
                 }
             },
             debugConfiguration.stateObserver
-        ).safe(logger.subLogger("StateObserver"))
+        ).safe(logger)
     }
 
 
@@ -155,31 +154,25 @@ internal open class QQAndroidBot constructor(
             set(SsoProcessorContext, SsoProcessorContextImpl(bot))
             set(SsoProcessor, SsoProcessorImpl(get(SsoProcessorContext)))
             set(HeartbeatProcessor, HeartbeatProcessorImpl())
-            set(KeyRefreshProcessor, KeyRefreshProcessorImpl(networkLogger.subLogger("KeyRefreshProcessor")))
-            set(ConfigPushProcessor, ConfigPushProcessorImpl(networkLogger.subLogger("ConfigPushProcessor")))
+            set(KeyRefreshProcessor, KeyRefreshProcessorImpl(networkLogger))
+            set(ConfigPushProcessor, ConfigPushProcessorImpl(networkLogger))
             set(BotOfflineEventMonitor, BotOfflineEventMonitorImpl())
 
-            set(BotInitProcessor, BotInitProcessorImpl(bot, components, networkLogger.subLogger("BotInitProcessor")))
+            set(BotInitProcessor, BotInitProcessorImpl(bot, components, bot.logger))
             set(ContactCacheService, ContactCacheServiceImpl(bot))
-            set(ContactUpdater, ContactUpdaterImpl(bot, components, networkLogger.subLogger("ContactUpdater")))
-            set(
-                BdhSessionSyncer,
-                BdhSessionSyncerImpl(configuration, components, networkLogger.subLogger("BotSessionSyncer"))
-            )
+            set(ContactUpdater, ContactUpdaterImpl(bot, components, networkLogger))
+            set(BdhSessionSyncer, BdhSessionSyncerImpl(configuration, networkLogger, components))
             set(ServerList, ServerListImpl())
             set(PacketLoggingStrategy, PacketLoggingStrategyImpl(bot))
             set(
                 PacketHandler, PacketHandlerChain(
-                    LoggingPacketHandlerAdapter(get(PacketLoggingStrategy), networkLogger),
+                    LoggingPacketHandlerAdapter(networkLogger, get(PacketLoggingStrategy)),
                     EventBroadcasterPacketHandler(networkLogger),
                     CallPacketFactoryPacketHandler(bot)
                 )
             )
             set(PacketCodec, PacketCodecImpl())
-            set(
-                OtherClientUpdater,
-                OtherClientUpdaterImpl(bot, components, networkLogger.subLogger("BotSessionSyncer"))
-            )
+            set(OtherClientUpdater, OtherClientUpdaterImpl(bot, components, bot.logger))
             set(ConfigPushSyncer, ConfigPushSyncerImpl())
 
             set(StateObserver, stateObserverChain())
