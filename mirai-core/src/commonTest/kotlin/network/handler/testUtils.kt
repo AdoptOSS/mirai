@@ -12,10 +12,7 @@ package net.mamoe.mirai.internal.network.handler
 import kotlinx.coroutines.CompletableDeferred
 import net.mamoe.mirai.internal.MockBot
 import net.mamoe.mirai.internal.QQAndroidBot
-import net.mamoe.mirai.internal.network.handler.impl.LoggingStateObserver
 import net.mamoe.mirai.internal.network.handler.impl.NetworkHandlerSupport
-import net.mamoe.mirai.internal.network.handler.impl.SafeStateObserver
-import net.mamoe.mirai.internal.network.handler.impl.StateObserver
 import net.mamoe.mirai.internal.network.net.protocol.SsoProcessor
 import net.mamoe.mirai.internal.network.net.protocol.SsoProcessorContextImpl
 import net.mamoe.mirai.internal.network.protocol.packet.OutgoingPacket
@@ -28,10 +25,6 @@ internal class TestNetworkHandlerContext(
     override val bot: QQAndroidBot = MockBot(),
     override val logger: MiraiLogger = MiraiLogger.create("Test"),
     override val ssoProcessor: SsoProcessor = SsoProcessor(SsoProcessorContextImpl(bot)),
-    override val stateObserver: StateObserver? = SafeStateObserver(
-        LoggingStateObserver(MiraiLogger.create("States")),
-        MiraiLogger.create("StateObserver errors")
-    ),
 ) : NetworkHandlerContext
 
 internal open class TestNetworkHandler(
@@ -45,7 +38,7 @@ internal open class TestNetworkHandler(
         val resumeCount = AtomicInteger(0)
         val onResume get() = resumeDeferred.onJoin
 
-        override suspend fun resumeConnection0() {
+        override suspend fun resumeConnection() {
             resumeCount.incrementAndGet()
             resumeDeferred.complete(Unit)
         }
