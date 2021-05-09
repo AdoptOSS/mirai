@@ -27,7 +27,6 @@ import net.mamoe.mirai.internal.network.context.SsoProcessorContext
 import net.mamoe.mirai.internal.network.handler.NetworkHandler.State
 import net.mamoe.mirai.internal.network.handler.NetworkHandlerContext
 import net.mamoe.mirai.internal.network.handler.NetworkHandlerSupport
-import net.mamoe.mirai.internal.network.handler.logger
 import net.mamoe.mirai.internal.network.handler.state.StateObserver
 import net.mamoe.mirai.internal.network.protocol.packet.OutgoingPacket
 import net.mamoe.mirai.utils.ExceptionCollector
@@ -182,8 +181,7 @@ internal open class NettyNetworkHandler(
 
         override suspend fun resumeConnection0() {
             setState { StateConnecting(ExceptionCollector()) }
-                ?.resumeConnection()
-                ?: this@NettyNetworkHandler.resumeConnection() // concurrently closed by other thread.
+                .resumeConnection()
         }
 
         override fun toString(): String = "StateInitialized"
@@ -219,9 +217,6 @@ internal open class NettyNetworkHandler(
         }.apply {
             invokeOnCompletion { error ->
                 if (error != null) {
-                    if (error is StateSwitchingException && error.new is StateConnecting) {
-                        return@invokeOnCompletion // already been switching to CONNECTING
-                    }
                     setState {
                         StateConnecting(
                             collectiveExceptions.apply { collect(error) },
@@ -244,8 +239,7 @@ internal open class NettyNetworkHandler(
             connectResult.await() // propagates exceptions
             val connection = connection.await()
             setState { StateLoading(connection) }
-                ?.resumeConnection()
-                ?: this@NettyNetworkHandler.resumeConnection() // concurrently closed by other thread.
+                .resumeConnection()
         }
 
         override fun toString(): String = "StateConnecting"
@@ -298,12 +292,6 @@ internal open class NettyNetworkHandler(
                     setState {
                         StateConnecting(ExceptionCollector(IllegalStateException("Exception in Heartbeat job", e)))
                     }
-                }
-            }
-        }.apply {
-            invokeOnCompletion { e ->
-                if (e != null) {
-                    logger.debug { "x" }
                 }
             }
         }

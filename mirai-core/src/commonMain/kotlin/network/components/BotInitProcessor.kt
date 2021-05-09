@@ -24,6 +24,7 @@ import net.mamoe.mirai.internal.network.protocol.data.proto.MsgSvc
 import net.mamoe.mirai.internal.network.protocol.packet.OutgoingPacket
 import net.mamoe.mirai.internal.network.protocol.packet.OutgoingPacketWithRespType
 import net.mamoe.mirai.internal.network.protocol.packet.chat.receive.MessageSvcPbGetMsg
+import net.mamoe.mirai.internal.network.protocol.packet.login.StatSvc
 import net.mamoe.mirai.internal.network.protocol.packet.sendAndExpect
 import net.mamoe.mirai.utils.MiraiLogger
 import net.mamoe.mirai.utils.info
@@ -61,8 +62,7 @@ internal class BotInitProcessorImpl(
         check(bot.isActive) { "bot is dead therefore network can't init." }
         context[ContactUpdater].closeAllContacts(CancellationException("re-init"))
 
-        val registerResp =
-            context[SsoProcessor].registerResp ?: error("Internal error: registerResp is not yet available.")
+        val registerResp = registerClientOnline()
 
         bot.launch(CoroutineName("Awaiting ConfigPushSvc.PushReq")) {
             context[ConfigPushSyncer].awaitSync()
@@ -76,6 +76,10 @@ internal class BotInitProcessorImpl(
         }
 
         bot.components[SsoProcessor].firstLoginSucceed = true
+    }
+
+    private suspend fun registerClientOnline(): StatSvc.Register.Response {
+        return StatSvc.Register.online(context[SsoProcessor].client).sendAndExpect(bot)
     }
 
     private suspend fun syncMessageSvc() {

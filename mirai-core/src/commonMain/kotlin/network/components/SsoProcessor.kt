@@ -46,7 +46,6 @@ internal interface SsoProcessor {
     val ssoSession: SsoSession
 
     var firstLoginSucceed: Boolean
-    val registerResp: StatSvc.Register.Response?
 
     /**
      * The observers to launch jobs for states.
@@ -81,11 +80,7 @@ internal class SsoProcessorImpl(
     // public
     ///////////////////////////////////////////////////////////////////////////
 
-    @Volatile
     override var firstLoginSucceed: Boolean = false
-
-    @Volatile
-    override var registerResp: StatSvc.Register.Response? = null
 
     @Volatile
     override var client = createClient(ssoContext.bot)
@@ -120,12 +115,7 @@ internal class SsoProcessorImpl(
             SlowLoginImpl(handler).doLogin()
         }
         ssoContext.accountSecretsManager.saveSecrets(ssoContext.account, AccountSecretsImpl(client))
-        registerClientOnline(handler)
-        ssoContext.bot.logger.info { "SSO login successful." }
-    }
-
-    private suspend fun registerClientOnline(handler: NetworkHandler): StatSvc.Register.Response {
-        return StatSvc.Register.online(client).sendAndExpect(handler).also { registerResp = it }
+        ssoContext.bot.logger.info { "Login successful." }
     }
 
     override suspend fun logout(handler: NetworkHandler) {
