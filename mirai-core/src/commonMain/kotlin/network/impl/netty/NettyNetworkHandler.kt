@@ -244,7 +244,7 @@ internal open class NettyNetworkHandler(
 
         override suspend fun sendPacketImpl(packet: OutgoingPacket): Boolean {
             connection.await() // split line number
-                .writeAndFlushOrCloseAsync(packet)
+                .writeAndFlush(packet)
             return true
         }
 
@@ -276,7 +276,7 @@ internal open class NettyNetworkHandler(
         }
 
         override suspend fun sendPacketImpl(packet: OutgoingPacket): Boolean {
-            connection.writeAndFlushOrCloseAsync(packet)
+            connection.writeAndFlush(packet)
             return true
         }
 
@@ -357,7 +357,7 @@ internal open class NettyNetworkHandler(
         }
 
         override suspend fun sendPacketImpl(packet: OutgoingPacket): Boolean {
-            connection.writeAndFlushOrCloseAsync(packet)
+            connection.writeAndFlush(packet)
             return true
         }
 
