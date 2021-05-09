@@ -50,18 +50,6 @@ internal interface PacketCodec {
     }
 }
 
-internal class OicqDecodingException(
-    val targetException: Throwable
-) : RuntimeException(
-    null, targetException,
-    true, // enableSuppression
-    false, // writableStackTrace
-) {
-    override fun getStackTrace(): Array<StackTraceElement> {
-        return targetException.stackTrace
-    }
-}
-
 internal class PacketCodecImpl : PacketCodec {
 
     override fun decodeRaw(client: SsoSession, input: ByteReadPacket): RawIncomingPacket = input.run {
@@ -99,13 +87,7 @@ internal class PacketCodecImpl : PacketCodec {
                     2 -> RawIncomingPacket(
                         raw.commandName,
                         raw.sequenceId,
-                        raw.body.withUse {
-                            try {
-                                parseOicqResponse(client)
-                            } catch (e: Throwable) {
-                                throw OicqDecodingException(e)
-                            }
-                        }
+                        raw.body.withUse { parseOicqResponse(client) }
                     )
                     else -> error("Unknown flag2=$flag2")
                 }
