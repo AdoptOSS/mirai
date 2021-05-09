@@ -32,7 +32,6 @@ import net.mamoe.mirai.internal.network.protocol.packet.OutgoingPacket
 import net.mamoe.mirai.utils.ExceptionCollector
 import net.mamoe.mirai.utils.childScope
 import net.mamoe.mirai.utils.debug
-import net.mamoe.mirai.utils.systemProp
 import java.net.SocketAddress
 import kotlin.coroutines.CoroutineContext
 import io.netty.channel.Channel as NettyChannel
@@ -207,7 +206,9 @@ internal open class NettyNetworkHandler(
         wait: Boolean = false
     ) : NettyState(State.CONNECTING) {
         private val connection = async {
-            if (wait) delay(RECONNECT_DELAY)
+            if (wait) {
+                delay(5000)
+            }
             createConnection(decodePipeline)
         }
 
@@ -345,12 +346,4 @@ internal open class NettyNetworkHandler(
     }
 
     override fun initialState(): BaseStateImpl = StateInitialized()
-
-    companion object {
-        /**
-         * millis
-         */
-        @JvmField
-        var RECONNECT_DELAY = systemProp("mirai.network.reconnect.delay", 5000)
-    }
 }
