@@ -11,10 +11,8 @@ package net.mamoe.mirai.internal.network.handler.impl.netty
 
 import io.netty.bootstrap.Bootstrap
 import io.netty.buffer.ByteBuf
-import io.netty.channel.ChannelHandlerContext
-import io.netty.channel.ChannelInboundHandlerAdapter
-import io.netty.channel.ChannelInitializer
-import io.netty.channel.SimpleChannelInboundHandler
+import io.netty.buffer.ByteBufInputStream
+import io.netty.channel.*
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
@@ -24,6 +22,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.sendBlocking
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.consumeAsFlow
+import kotlinx.io.core.ByteReadPacket
 import net.mamoe.mirai.internal.network.handler.NetworkHandler
 import net.mamoe.mirai.internal.network.handler.NetworkHandlerContext
 import net.mamoe.mirai.internal.network.handler.impl.NetworkHandlerSupport
@@ -208,4 +207,28 @@ internal class NettyNetworkHandler(
     }
 
     override fun initialState(): BaseStateImpl = StateInitialized()
+}
+
+internal suspend fun ChannelFuture.awaitKt(): ChannelFuture {
+    suspendCancellableCoroutine<Unit> { cont ->
+        cont.invokeOnCancellation {
+            channel().close()
+        }
+        addListener { f ->
+            if (f.isSuccess) {
+                cont.resumeWith(Result.success(Unit))
+            } else {
+                cont.resumeWith(Result.failure(f.cause()))
+            }
+        }
+    }
+    return this
+}
+
+// TODO: 2021/4/14 Add test for toReadPacket
+private fun ByteBuf.toReadPacket(): ByteReadPacket {
+    val buf = this
+    return buildPacket {
+        ByteBufInputStream(buf).withUse { copyTo(outputStream()) }
+    }
 }
