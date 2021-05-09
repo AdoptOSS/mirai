@@ -42,7 +42,6 @@ internal open class NettyNetworkHandler(
 ) : NetworkHandlerSupport(context) {
     override fun close(cause: Throwable?) {
         setState { StateClosed(CancellationException("Closed manually.", cause)) }
-        super.close(cause)
         // wrap an exception, more stacktrace information
     }
 

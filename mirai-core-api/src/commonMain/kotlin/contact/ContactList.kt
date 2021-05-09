@@ -22,13 +22,10 @@ import java.util.concurrent.ConcurrentLinkedQueue
  */
 @Suppress("unused")
 public class ContactList<C : Contact>
-@MiraiInternalApi public constructor(@JvmField @MiraiInternalApi public val delegate: ConcurrentLinkedQueue<C>) :
+internal constructor(@JvmField @MiraiInternalApi public val delegate: ConcurrentLinkedQueue<C>) :
     Collection<C> by delegate {
-    @MiraiInternalApi
-    public constructor(collection: Collection<C>) : this(ConcurrentLinkedQueue(collection))
-
-    @MiraiInternalApi
-    public constructor() : this(ConcurrentLinkedQueue())
+    internal constructor(collection: Collection<C>) : this(ConcurrentLinkedQueue(collection))
+    internal constructor() : this(ConcurrentLinkedQueue())
 
     /**
      * 获取一个 [Contact.id] 为 [id] 的元素. 在不存在时返回 `null`.

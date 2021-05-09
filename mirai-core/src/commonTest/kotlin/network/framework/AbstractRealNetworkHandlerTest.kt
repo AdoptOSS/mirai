@@ -9,7 +9,6 @@
 
 package net.mamoe.mirai.internal.network.framework
 
-import kotlinx.coroutines.CoroutineScope
 import net.mamoe.mirai.internal.MockBot
 import net.mamoe.mirai.internal.QQAndroidBot
 import net.mamoe.mirai.internal.network.QQAndroidClient
@@ -21,23 +20,17 @@ import net.mamoe.mirai.internal.network.context.SsoProcessorContext
 import net.mamoe.mirai.internal.network.context.SsoProcessorContextImpl
 import net.mamoe.mirai.internal.network.context.SsoSession
 import net.mamoe.mirai.internal.network.handler.NetworkHandler
-import net.mamoe.mirai.internal.network.handler.NetworkHandler.State
 import net.mamoe.mirai.internal.network.handler.NetworkHandlerContextImpl
 import net.mamoe.mirai.internal.network.handler.NetworkHandlerFactory
 import net.mamoe.mirai.internal.network.handler.state.StateObserver
 import net.mamoe.mirai.internal.test.AbstractTest
 import net.mamoe.mirai.utils.MiraiLogger
 import net.mamoe.mirai.utils.debug
-import net.mamoe.mirai.utils.lateinitMutableProperty
-import org.junit.jupiter.api.TestInstance
 import java.net.InetSocketAddress
-import java.util.concurrent.ConcurrentLinkedQueue
-import kotlin.test.assertEquals
 
 /**
  * With real factory and components as in [QQAndroidBot.components].
  */
-@TestInstance(TestInstance.Lifecycle.PER_METHOD)
 internal abstract class AbstractRealNetworkHandlerTest<H : NetworkHandler> : AbstractTest() {
     init {
         System.setProperty("mirai.debug.network.state.observer.logging", "true")
@@ -45,24 +38,13 @@ internal abstract class AbstractRealNetworkHandlerTest<H : NetworkHandler> : Abs
     }
 
     protected abstract val factory: NetworkHandlerFactory<H>
-    protected abstract val network: NetworkHandler
 
-    protected open var bot: QQAndroidBot by lateinitMutableProperty {
+    protected open val bot: QQAndroidBot by lazy {
         MockBot {
             networkHandlerProvider { createHandler() }
         }
     }
-
     protected open val networkLogger = MiraiLogger.TopLevel
-
-    protected sealed class NHEvent {
-        object Login : NHEvent()
-        object Logout : NHEvent()
-        object DoHeartbeatNow : NHEvent()
-        object Init : NHEvent()
-    }
-
-    protected val nhEvents = ConcurrentLinkedQueue<NHEvent>()
 
     protected open val defaultComponents = ConcurrentComponentStorage().apply {
         val components = this
@@ -73,18 +55,15 @@ internal abstract class AbstractRealNetworkHandlerTest<H : NetworkHandler> : Abs
             override val ssoSession: SsoSession get() = bot.client
             override fun createObserverChain(): StateObserver = get(StateObserver)
             override suspend fun login(handler: NetworkHandler) {
-                nhEvents.add(NHEvent.Login)
                 networkLogger.debug { "SsoProcessor.login" }
             }
 
             override suspend fun logout(handler: NetworkHandler) {
-                nhEvents.add(NHEvent.Logout)
                 networkLogger.debug { "SsoProcessor.logout" }
             }
         })
         set(HeartbeatProcessor, object : HeartbeatProcessor {
             override suspend fun doHeartbeatNow(networkHandler: NetworkHandler) {
-                nhEvents.add(NHEvent.DoHeartbeatNow)
                 networkLogger.debug { "HeartbeatProcessor.doHeartbeatNow" }
             }
         })
@@ -98,7 +77,6 @@ internal abstract class AbstractRealNetworkHandlerTest<H : NetworkHandler> : Abs
 
         set(BotInitProcessor, object : BotInitProcessor {
             override suspend fun init() {
-                nhEvents.add(NHEvent.Init)
                 networkLogger.debug { "BotInitProcessor.init" }
             }
         })
@@ -111,10 +89,6 @@ internal abstract class AbstractRealNetworkHandlerTest<H : NetworkHandler> : Abs
         set(OtherClientUpdater, OtherClientUpdaterImpl(bot, components, bot.logger))
         set(ConfigPushSyncer, ConfigPushSyncerImpl())
 
-        set(BotOfflineEventMonitor, object : BotOfflineEventMonitor {
-            override fun attachJob(bot: QQAndroidBot, scope: CoroutineScope) {
-            }
-        })
         set(StateObserver, bot.run { stateObserverChain() })
     }
 
@@ -128,13 +102,4 @@ internal abstract class AbstractRealNetworkHandlerTest<H : NetworkHandler> : Abs
             InetSocketAddress.createUnresolved("localhost", 123)
         )
     }
-
-    ///////////////////////////////////////////////////////////////////////////
-    // Assertions
-    ///////////////////////////////////////////////////////////////////////////
-
-    protected fun assertState(state: State) {
-        assertEquals(state, network.state)
-    }
-
 }

@@ -11,7 +11,6 @@
 package net.mamoe.mirai.internal
 
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import net.mamoe.mirai.Bot
 import net.mamoe.mirai.Mirai
@@ -30,6 +29,7 @@ import net.mamoe.mirai.internal.network.context.SsoProcessorContextImpl
 import net.mamoe.mirai.internal.network.handler.NetworkHandler
 import net.mamoe.mirai.internal.network.handler.NetworkHandler.State
 import net.mamoe.mirai.internal.network.handler.NetworkHandlerContextImpl
+import net.mamoe.mirai.internal.network.handler.NetworkHandlerSupport
 import net.mamoe.mirai.internal.network.handler.selector.FactoryKeepAliveNetworkHandlerSelector
 import net.mamoe.mirai.internal.network.handler.selector.SelectorNetworkHandler
 import net.mamoe.mirai.internal.network.handler.state.*
@@ -77,12 +77,12 @@ internal open class QQAndroidBot constructor(
 
     // TODO: 2021/4/14         bdhSyncer.loadFromCache()  when login
 
-    // also called by tests.
+    // IDE error, don't move into lazy
     fun ComponentStorage.stateObserverChain(): StateObserver {
         val components = this
         return StateObserver.chainOfNotNull(
             components[BotInitProcessor].asObserver(),
-            StateChangedObserver(to = State.OK) { new ->
+            StateChangedObserver(State.OK) { new ->
                 bot.launch(logger.asCoroutineExceptionHandler()) {
                     BotOnlineEvent(bot).broadcast()
                     if (bot.firstLoginSucceed) { // TODO: 2021/4/21 actually no use
@@ -90,26 +90,30 @@ internal open class QQAndroidBot constructor(
                     }
                 }
             },
-            StateChangedObserver(State.OK, State.CONNECTING) { new ->
-                bot.launch(logger.asCoroutineExceptionHandler()) {
-                    BotOfflineEvent.Dropped(bot, new.getCause()).broadcast()
-                }
-            },
-            StateChangedObserver(State.OK, State.CLOSED) { new ->
-                bot.launch(logger.asCoroutineExceptionHandler()) {
-                    BotOfflineEvent.Active(bot, new.getCause()).broadcast()
-                }
-            },
-            StateChangedObserver(to = State.OK) { new ->
-                components[BotOfflineEventMonitor].attachJob(bot, new)
-            },
-            StateChangedObserver(State.OK, State.CLOSED) {
-                runBlocking {
-                    try {
-                        components[SsoProcessor].logout(network)
-                    } catch (ignored: Exception) {
+            object : StateObserver {
+                override fun stateChanged(
+                    networkHandler: NetworkHandlerSupport,
+                    previous: NetworkHandlerSupport.BaseStateImpl,
+                    new: NetworkHandlerSupport.BaseStateImpl
+                ) {
+                    val p = previous.correspondingState
+                    val n = new.correspondingState
+                    when {
+                        p == State.OK && n == State.CONNECTING -> {
+                            bot.launch(logger.asCoroutineExceptionHandler()) {
+                                BotOfflineEvent.Dropped(bot, new.getCause()).broadcast()
+                            }
+                        }
+                        p == State.OK && n == State.CLOSED -> {
+                            bot.launch(logger.asCoroutineExceptionHandler()) {
+                                BotOfflineEvent.Active(bot, new.getCause()).broadcast()
+                            }
+                        }
                     }
                 }
+            },
+            StateChangedObserver(State.OK) { new ->
+                components[BotOfflineEventMonitor].attachJob(bot, new)
             },
             debugConfiguration.stateObserver
         ).safe(logger)
@@ -151,6 +155,10 @@ internal open class QQAndroidBot constructor(
     }
 
     val client get() = components[SsoProcessor].client
+
+    override suspend fun sendLogout() {
+        components[SsoProcessor].logout(network)
+    }
 
     override fun createNetworkHandler(): NetworkHandler {
         val context = NetworkHandlerContextImpl(
