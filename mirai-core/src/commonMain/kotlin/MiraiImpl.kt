@@ -324,7 +324,8 @@ internal open class MiraiImpl : IMirai, LowLevelApiAccessor {
     override suspend fun getRawGroupList(bot: Bot): Sequence<Long> {
         bot.asQQAndroidBot()
         return bot.network.run {
-            FriendList.GetTroopListSimplify(bot.client).sendAndExpect(retry = 2)
+            FriendList.GetTroopListSimplify(bot.client)
+                .sendAndExpect<FriendList.GetTroopListSimplify.Response>(retry = 2)
         }.groups.asSequence().map { it.groupUin.shl(32) and it.groupCode }
     }
 
@@ -344,7 +345,7 @@ internal open class MiraiImpl : IMirai, LowLevelApiAccessor {
                     targetGroupUin = groupUin,
                     targetGroupCode = groupCode,
                     nextUin = nextUin
-                ).sendAndExpect(retry = 3)
+                ).sendAndExpect<FriendList.GetTroopMemberList.Response>(retry = 3)
                 sequence += data.members.asSequence().map { troopMemberInfo ->
                     MemberInfoImpl(bot.client, troopMemberInfo, ownerId)
                 }
@@ -388,7 +389,7 @@ internal open class MiraiImpl : IMirai, LowLevelApiAccessor {
                 messageIds,
                 messageInternalIds,
                 time,
-            ).sendAndExpect()
+            ).sendAndExpect<PbMessageSvc.PbMsgWithDraw.Response>()
         }
 
         response is PbMessageSvc.PbMsgWithDraw.Response.Success
@@ -410,7 +411,7 @@ internal open class MiraiImpl : IMirai, LowLevelApiAccessor {
                 messageIds,
                 messageInternalIds,
                 time,
-            ).sendAndExpect()
+            ).sendAndExpect<PbMessageSvc.PbMsgWithDraw.Response>()
         }
 
         response is PbMessageSvc.PbMsgWithDraw.Response.Success
@@ -728,7 +729,7 @@ internal open class MiraiImpl : IMirai, LowLevelApiAccessor {
                 client = bot.client,
                 messageData = data,
                 dstUin = sendMessageHandler.targetUin
-            ).sendAndExpect()
+            ).sendAndExpect<MultiMsg.ApplyUp.Response>()
         }
 
         val resId: String

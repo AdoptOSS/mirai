@@ -9,6 +9,7 @@
 
 package net.mamoe.mirai.internal.network.component
 
+import net.mamoe.mirai.internal.network.handler.component.ComponentKey
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
