@@ -48,17 +48,7 @@ internal class CombinedStateObserver(
         last.afterStateResume(networkHandler, state, result)
     }
 
-    override fun toString(): String {
-        return "CombinedStateObserver(first=$first, last=$last)"
-    }
-
     companion object {
-        operator fun StateObserver?.plus(last: StateObserver?): StateObserver {
-            return when {
-                this == null -> last
-                last == null -> this
-                else -> CombinedStateObserver(this, last)
-            } ?: StateObserver.NOP
-        }
+        operator fun StateObserver.plus(last: StateObserver): StateObserver = CombinedStateObserver(this, last)
     }
 }

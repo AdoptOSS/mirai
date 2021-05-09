@@ -76,6 +76,8 @@ internal class FileCacheAccountSecretsManager(
         )
 
         logger.info { "Saved account secrets to local cache for fast login." }
+
+        TEA.encrypt(file.readBytes(), account.passwordMd5).loadAs(AccountSecretsImpl.serializer())
     }
 
     override fun getSecrets(account: BotAccount): AccountSecrets? {

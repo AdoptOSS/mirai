@@ -23,7 +23,5 @@ internal interface ComponentStorage {
     @Throws(NoSuchComponentException::class)
     operator fun <T : Any> get(key: ComponentKey<T>): T
     fun <T : Any> getOrNull(key: ComponentKey<T>): T?
-
-    override fun toString(): String
 }
 

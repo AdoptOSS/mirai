@@ -108,8 +108,4 @@ internal class ServerListImpl(
         if (current.isEmpty()) refresh()
         return current.remove()
     }
-
-    override fun toString(): String {
-        return "ServerListImpl(current.size=${current.size})"
-    }
 }

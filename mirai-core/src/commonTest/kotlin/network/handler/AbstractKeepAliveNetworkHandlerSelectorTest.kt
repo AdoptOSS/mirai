@@ -25,7 +25,7 @@ private class TestSelector(val createInstance0: () -> NetworkHandler) :
     }
 }
 
-internal class KeepAliveNetworkHandlerSelectorTest {
+internal class AbstractKeepAliveNetworkHandlerSelectorTest {
 
     private fun createHandler() = TestNetworkHandler(TestNetworkHandlerContext())
 

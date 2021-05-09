@@ -31,7 +31,7 @@ internal class ConcurrentComponentStorage(
         return map[key] as T?
     }
 
-    override operator fun <T : Any> set(key: ComponentKey<T>, value: T) {
+    override operator fun <T : Any> set(key: ComponentKey<T>, value: @UnsafeVariance T) {
         map[key] = value
     }
 

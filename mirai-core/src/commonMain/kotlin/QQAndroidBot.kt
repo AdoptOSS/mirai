@@ -14,21 +14,23 @@ import kotlinx.coroutines.sync.Mutex
 import net.mamoe.mirai.Bot
 import net.mamoe.mirai.Mirai
 import net.mamoe.mirai.contact.Group
+import net.mamoe.mirai.contact.OtherClientInfo
+import net.mamoe.mirai.internal.contact.OtherClientImpl
 import net.mamoe.mirai.internal.contact.checkIsGroupImpl
 import net.mamoe.mirai.internal.network.Packet
 import net.mamoe.mirai.internal.network.handler.NetworkHandler
-import net.mamoe.mirai.internal.network.handler.component.ComponentStorage
 import net.mamoe.mirai.internal.network.handler.component.ConcurrentComponentStorage
+import net.mamoe.mirai.internal.network.handler.component.set
 import net.mamoe.mirai.internal.network.handler.components.*
 import net.mamoe.mirai.internal.network.handler.context.NetworkHandlerContextImpl
 import net.mamoe.mirai.internal.network.handler.context.SsoProcessorContextImpl
 import net.mamoe.mirai.internal.network.handler.impl.netty.NettyNetworkHandlerFactory
+import net.mamoe.mirai.internal.network.handler.logger
 import net.mamoe.mirai.internal.network.handler.selector.FactoryKeepAliveNetworkHandlerSelector
 import net.mamoe.mirai.internal.network.handler.selector.SelectorNetworkHandler
 import net.mamoe.mirai.internal.network.handler.state.LoggingStateObserver
 import net.mamoe.mirai.internal.network.handler.state.SafeStateObserver
 import net.mamoe.mirai.internal.network.handler.state.StateObserver
-import net.mamoe.mirai.internal.network.handler.state.safe
 import net.mamoe.mirai.internal.network.protocol.packet.OutgoingPacket
 import net.mamoe.mirai.internal.network.protocol.packet.OutgoingPacketWithRespType
 import net.mamoe.mirai.internal.network.protocol.packet.login.StatSvc
@@ -36,6 +38,7 @@ import net.mamoe.mirai.utils.BotConfiguration
 import net.mamoe.mirai.utils.MiraiLogger
 import net.mamoe.mirai.utils.systemProp
 import kotlin.contracts.contract
+import kotlin.coroutines.CoroutineContext
 
 internal fun Bot.asQQAndroidBot(): QQAndroidBot {
     contract {
@@ -45,12 +48,18 @@ internal fun Bot.asQQAndroidBot(): QQAndroidBot {
     return this as QQAndroidBot
 }
 
+internal fun QQAndroidBot.createOtherClient(
+    info: OtherClientInfo,
+): OtherClientImpl {
+    return OtherClientImpl(this, coroutineContext, info)
+}
+
 internal class BotDebugConfiguration(
     var stateObserver: StateObserver? = when {
         systemProp("mirai.debug.network.state.observer.logging", false) ->
             SafeStateObserver(
                 LoggingStateObserver(MiraiLogger.create("States")),
-                MiraiLogger.create("LoggingStateObserver errors")
+                MiraiLogger.create("StateObserver errors")
             )
         else -> null
     }
@@ -72,39 +81,19 @@ internal class QQAndroidBot constructor(
 
     // TODO: 2021/4/14         bdhSyncer.loadFromCache()  when login
 
-    // IDE error, don't move into lazy
-    private fun ComponentStorage.stateObserverChain(): StateObserver {
-        val components = this
-        return StateObserver.chainOfNotNull(
-            components[BotInitProcessor].asObserver().safe(networkLogger),
-            debugConfiguration.stateObserver
-        )
-    }
-
-
-    private val networkLogger: MiraiLogger by lazy { configuration.networkLoggerSupplier(this) }
     internal val components: ConcurrentComponentStorage by lazy {
         ConcurrentComponentStorage().apply {
-            val components = this // avoid mistakes
-            set(SsoProcessor, SsoProcessorImpl(SsoProcessorContextImpl(bot)))
-            // put sso processor at the first to make `client` faster.
-
-            set(BotInitProcessor, BotInitProcessorImpl(bot, components, bot.logger))
-            set(ContactCacheService, ContactCacheServiceImpl(bot))
-            set(ContactUpdater, ContactUpdaterImpl(bot, components, networkLogger))
-            set(BdhSessionSyncer, BdhSessionSyncerImpl(configuration, networkLogger, components))
-            set(ServerList, ServerListImpl())
             set(
-                PacketHandler, PacketHandlerChain(
-                    LoggingPacketHandler(bot, components, logger),
-                    EventBroadcasterPacketHandler(bot, components, logger)
-                )
-            )
-            set(PacketCodec, PacketCodecImpl())
-            set(OtherClientUpdater, OtherClientUpdaterImpl(bot, components, bot.logger))
-            set(ConfigPushSyncer, ConfigPushSyncerImpl())
+                SsoProcessor,
+                SsoProcessorImpl(SsoProcessorContextImpl(bot))
+            ) // put sso processor at the first to make `client` faster.
 
-            set(StateObserver, stateObserverChain())
+            set(StateObserver, debugConfiguration.stateObserver)
+            set(ContactCacheService, ContactCacheServiceImpl(bot))
+            set(ContactUpdater, ContactUpdaterImpl(bot, this))
+            set(BdhSessionSyncer, BdhSessionSyncerImpl(configuration, network.logger, this))
+            set(ServerList, ServerListImpl())
+
 
             // TODO: 2021/4/16 load server list from cache (add a provider)
             // bot.bdhSyncer.loadServerListFromCache()
@@ -118,10 +107,10 @@ internal class QQAndroidBot constructor(
         network.sendWithoutExpect(StatSvc.Register.offline(client))
     }
 
-    override fun createNetworkHandler(): NetworkHandler {
+    override fun createNetworkHandler(coroutineContext: CoroutineContext): NetworkHandler {
         val context = NetworkHandlerContextImpl(
             this,
-            networkLogger,
+            configuration.networkLoggerSupplier(this),
             components
         )
         return SelectorNetworkHandler(

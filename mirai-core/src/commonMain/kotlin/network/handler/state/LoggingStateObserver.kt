@@ -18,7 +18,7 @@ internal class LoggingStateObserver(
     val logger: MiraiLogger
 ) : StateObserver {
     override fun toString(): String {
-        return "LoggingStateObserver"
+        return "LoggingStateObserver(logger=$logger)"
     }
 
     override fun stateChanged(
@@ -35,10 +35,6 @@ internal class LoggingStateObserver(
         exception: Throwable
     ) {
         logger.debug({ "State changed: ${previousState.correspondingState} -> $exception" }, exception)
-    }
-
-    override fun beforeStateResume(networkHandler: NetworkHandler, state: NetworkHandlerSupport.BaseStateImpl) {
-        logger.debug { "State resuming: ${state.correspondingState}." }
     }
 
     override fun afterStateResume(

@@ -14,11 +14,11 @@ package net.mamoe.mirai.internal.network.handler.component
  */
 internal interface MutableComponentStorage : ComponentStorage {
     override operator fun <T : Any> get(key: ComponentKey<T>): T
-    operator fun <T : Any> set(key: ComponentKey<T>, value: T)
+    operator fun <T : Any> set(key: ComponentKey<T>, value: @UnsafeVariance T)
     fun <T : Any> remove(key: ComponentKey<T>): T?
 }
 
-internal operator fun <T : Any> MutableComponentStorage.set(key: ComponentKey<T>, value: T?) {
+internal operator fun <T : Any> MutableComponentStorage.set(key: ComponentKey<T>, value: @UnsafeVariance T?) {
     if (value == null) {
         remove(key)
     } else {

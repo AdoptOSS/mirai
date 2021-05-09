@@ -37,13 +37,17 @@ internal interface PacketCodec {
     /**
      * Process [RawIncomingPacket] using [IncomingPacketFactory.decode].
      *
-     * This function throws **no** exception and wrap them into [IncomingPacket].
+     * This function wraps exceptions into [IncomingPacket]
      */
     suspend fun processBody(bot: QQAndroidBot, input: RawIncomingPacket): IncomingPacket?
 
     companion object : ComponentKey<PacketCodec> {
-        val PACKET_DEBUG = systemProp("mirai.debug.network.packet.logger", false)
+        val PACKET_DEBUG = systemProp("mirai.debug.network.packet.logger", true)
 
+        /**
+         * 数据包相关的调试输出.
+         * 它默认是关闭的.
+         */
         internal val PacketLogger: MiraiLoggerWithSwitch by lazy {
             MiraiLogger.create("Packet").withSwitch(PACKET_DEBUG)
         }
