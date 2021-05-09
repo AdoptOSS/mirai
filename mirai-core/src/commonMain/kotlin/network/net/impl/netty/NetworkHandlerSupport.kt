@@ -81,7 +81,7 @@ internal abstract class NetworkHandlerSupport(
         sendPacketImpl(packet)
     }
 
-    override fun close() {
+    override suspend fun close() {
         coroutineContext.job.cancel("NetworkHandler closed.")
     }
 

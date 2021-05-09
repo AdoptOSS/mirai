@@ -24,9 +24,7 @@ import net.mamoe.mirai.internal.message.ForwardMessageInternal
 import net.mamoe.mirai.internal.message.LongMessageInternal
 import net.mamoe.mirai.internal.network.*
 import net.mamoe.mirai.internal.network.handler.BdhSessionSyncer
-import net.mamoe.mirai.internal.network.net.NetworkHandler
-import net.mamoe.mirai.internal.network.net.NetworkHandlerContextImpl
-import net.mamoe.mirai.internal.network.net.impl.netty.NettyNetworkHandler
+import net.mamoe.mirai.internal.network.handler.QQAndroidBotNetworkHandler
 import net.mamoe.mirai.internal.network.net.protocol.SsoContext
 import net.mamoe.mirai.internal.network.protocol.packet.OutgoingPacket
 import net.mamoe.mirai.internal.network.protocol.packet.OutgoingPacketWithRespType
@@ -38,9 +36,9 @@ import net.mamoe.mirai.internal.utils.friendCacheFile
 import net.mamoe.mirai.internal.utils.io.serialization.toByteArray
 import net.mamoe.mirai.message.data.ForwardMessage
 import net.mamoe.mirai.message.data.RichMessage
+import net.mamoe.mirai.network.LoginFailedException
 import net.mamoe.mirai.utils.*
 import java.io.File
-import java.net.InetSocketAddress
 import kotlin.contracts.contract
 import kotlin.coroutines.CoroutineContext
 
@@ -62,7 +60,7 @@ internal fun QQAndroidBot.createOtherClient(
 internal class QQAndroidBot constructor(
     internal val account: BotAccount,
     configuration: BotConfiguration
-) : AbstractBot(configuration, account.id), SsoContext {
+) : AbstractBot<QQAndroidBotNetworkHandler>(configuration, account.id), SsoContext {
     val bdhSyncer: BdhSessionSyncer = BdhSessionSyncer(this)
 
     ///////////////////////////////////////////////////////////////////////////
@@ -88,7 +86,7 @@ internal class QQAndroidBot constructor(
             )
         )
 
-        network.context.logger.info { "Saved account secrets to local cache for fast login." }
+        network.logger.info { "Saved account secrets to local cache for fast login." }
     }
 
     init {
@@ -149,7 +147,7 @@ internal class QQAndroidBot constructor(
         configuration.friendCacheFile().run {
             createFileIfNotExists()
             writeText(JsonForCache.encodeToString(FriendListCache.serializer(), friendListCache))
-            bot.network.context.logger.info { "Saved ${friendListCache.list.size} friends to local cache." }
+            bot.network.logger.info { "Saved ${friendListCache.list.size} friends to local cache." }
         }
     }
 
@@ -162,17 +160,29 @@ internal class QQAndroidBot constructor(
 
     override val groups: ContactList<Group> = ContactList()
 
-    // TODO: 2021/4/14         bdhSyncer.loadFromCache()  when login
-
-    override suspend fun sendLogout() {
-        network.sendWithoutExpect(StatSvc.Register.offline(client))
+    /**
+     * Final process for 'login'
+     */
+    @ThisApiMustBeUsedInWithConnectionLockBlock
+    @Throws(LoginFailedException::class) // only
+    override suspend fun relogin(cause: Throwable?) {
+        bdhSyncer.loadFromCache()
+        client.useNextServers { host, port ->
+            // net error in login
+            // network is dead therefore can't send any packet
+            reinitializeNetwork()
+            network.closeEverythingAndRelogin(host, port, cause, 0)
+        }
     }
 
-    override fun createNetworkHandler(coroutineContext: CoroutineContext): NetworkHandler {
-        return NettyNetworkHandler(
-            NetworkHandlerContextImpl(this, this),
-            InetSocketAddress("123", 1) // TODO: 2021/4/14 address
-        ) // TODO: 2021/4/14
+    override suspend fun sendLogout() {
+        network.run {
+            StatSvc.Register.offline(client).sendWithoutExpect()
+        }
+    }
+
+    override fun createNetworkHandler(coroutineContext: CoroutineContext): QQAndroidBotNetworkHandler {
+        return QQAndroidBotNetworkHandler(coroutineContext, this)
     }
 
     @JvmField

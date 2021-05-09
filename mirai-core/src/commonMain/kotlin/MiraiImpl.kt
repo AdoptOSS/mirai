@@ -162,7 +162,7 @@ internal open class MiraiImpl : IMirai, LowLevelApiAccessor {
     }
 
     override suspend fun refreshKeys(bot: Bot) {
-        // TODO: 2021/4/14 MiraiImpl.refreshKeys
+        bot.asQQAndroidBot().network.refreshKeys()
     }
 
     override suspend fun rejectNewFriendRequest(event: NewFriendRequestEvent, blackList: Boolean) {

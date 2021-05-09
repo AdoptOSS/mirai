@@ -19,7 +19,6 @@ import kotlinx.io.core.*
 import java.io.File
 import kotlin.text.Charsets
 
-public val DECRYPTER_16_ZERO: ByteArray = ByteArray(16)
 
 @Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE")
 public inline fun <R> ByteReadPacket.useBytes(
