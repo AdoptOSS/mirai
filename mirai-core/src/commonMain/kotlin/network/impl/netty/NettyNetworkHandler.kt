@@ -118,8 +118,7 @@ internal class NettyNetworkHandler(
         }
 
         future.channel().closeFuture().addListener {
-            if (_state.correspondingState == State.CLOSED) return@addListener
-            setState { StateConnecting(ExceptionCollector(it.cause())) }
+            setState { StateConnectionLost(it.cause()) }
         }
 
         return contextResult.await()
@@ -190,15 +189,9 @@ internal class NettyNetworkHandler(
          *
          * Dropped when state becomes [StateOK].
          */
-        private val collectiveExceptions: ExceptionCollector,
-        wait: Boolean = false
+        private val collectiveExceptions: ExceptionCollector
     ) : NettyState(State.CONNECTING) {
-        private val connection = async {
-            if (wait) {
-                delay(5000)
-            }
-            createConnection(decodePipeline)
-        }
+        private val connection = async { createConnection(decodePipeline) }
 
         private val connectResult = async {
             connection.join()
@@ -206,9 +199,8 @@ internal class NettyNetworkHandler(
         }.apply {
             invokeOnCompletion { error ->
                 if (error != null) setState {
-                    StateConnecting(
-                        collectiveExceptions.apply { collect(error) },
-                        wait = true
+                    StateClosed(
+                        CancellationException("Connection failure.", collectiveExceptions.collectGet(error))
                     )
                 } // logon failure closes the network handler.
                 // and this error will also be thrown by `StateConnecting.resumeConnection`
