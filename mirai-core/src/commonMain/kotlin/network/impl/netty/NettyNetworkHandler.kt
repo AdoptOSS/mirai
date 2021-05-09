@@ -47,11 +47,9 @@ internal open class NettyNetworkHandler(
 
     private fun closeSuper(cause: Throwable?) = super.close(cause)
 
-    final override tailrec suspend fun sendPacketImpl(packet: OutgoingPacket) {
+    override suspend fun sendPacketImpl(packet: OutgoingPacket) {
         val state = _state as NettyState
-        if (state.sendPacketImpl(packet)) return
-        _stateChangedDeferred.join() // wait for next state
-        return sendPacketImpl(packet)
+        state.sendPacketImpl(packet)
     }
 
     override fun toString(): String {
@@ -171,17 +169,12 @@ internal open class NettyNetworkHandler(
     protected abstract inner class NettyState(
         correspondingState: State
     ) : BaseStateImpl(correspondingState) {
-        /**
-         * @return `true` if packet has been sent, `false` if state is not ready for send.
-         * @throws IllegalStateException if is [StateClosed].
-         */
-        abstract suspend fun sendPacketImpl(packet: OutgoingPacket): Boolean
+        abstract suspend fun sendPacketImpl(packet: OutgoingPacket)
     }
 
     protected inner class StateInitialized : NettyState(State.INITIALIZED) {
-        override suspend fun sendPacketImpl(packet: OutgoingPacket): Boolean {
-//            error("Cannot send packet when connection is not set. (resumeConnection not called.)")
-            return false
+        override suspend fun sendPacketImpl(packet: OutgoingPacket) {
+            error("Cannot send packet when connection is not set. (resumeConnection not called.)")
         }
 
         override suspend fun resumeConnection0() {
@@ -241,10 +234,9 @@ internal open class NettyNetworkHandler(
 
         override fun getCause(): Throwable? = collectiveExceptions.getLast()
 
-        override suspend fun sendPacketImpl(packet: OutgoingPacket): Boolean {
+        override suspend fun sendPacketImpl(packet: OutgoingPacket) {
             connection.await() // split line number
                 .writeAndFlush(packet)
-            return true
         }
 
         override suspend fun resumeConnection0() {
@@ -265,9 +257,8 @@ internal open class NettyNetworkHandler(
     protected inner class StateLoading(
         private val connection: NettyChannel
     ) : NettyState(State.LOADING) {
-        override suspend fun sendPacketImpl(packet: OutgoingPacket): Boolean {
+        override suspend fun sendPacketImpl(packet: OutgoingPacket) {
             connection.writeAndFlush(packet)
-            return true
         }
 
         private val configPush = this@NettyNetworkHandler.launch(CoroutineName("ConfigPush sync")) {
@@ -332,9 +323,8 @@ internal open class NettyNetworkHandler(
             context[KeyRefreshProcessor].keyRefreshLoop(this@NettyNetworkHandler)
         }
 
-        override suspend fun sendPacketImpl(packet: OutgoingPacket): Boolean {
+        override suspend fun sendPacketImpl(packet: OutgoingPacket) {
             connection.writeAndFlush(packet)
-            return true
         }
 
         override suspend fun resumeConnection0() {

@@ -113,8 +113,6 @@ internal interface NetworkHandler : CoroutineScope {
     /**
      * Suspends the coroutine until [sendAndExpect] can be executed without suspension.
      *
-     * In other words, if this functions returns, it indicates that [state] is [State.LOADING] or [State.OK]
-     *
      * May throw exception that had caused current state to fail.
      * @see State
      */

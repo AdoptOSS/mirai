@@ -174,8 +174,7 @@ internal abstract class NetworkHandlerSupport(
 
     final override val state: NetworkHandler.State get() = _state.correspondingState
 
-    protected var _stateChangedDeferred = CompletableDeferred<NetworkHandler.State>()
-        private set
+    private var _stateChangedDeferred = CompletableDeferred<NetworkHandler.State>()
 
     /**
      * For suspension until a state. e.g login.
